@@ -58,7 +58,7 @@
   }
   .png-modal-hint{font-size:11.5px;color:var(--muted);margin-bottom:8px;}
   .png-modal-inner img{max-width:100%;height:auto;border-radius:6px;border:1px solid var(--border);}
-  .wrap{max-width:520px;margin:-22px auto 0;padding:0 14px 40px;}
+  .wrap{max-width:520px;margin:-22px auto 0;padding:0 14px 40px;position:relative;z-index:1;}
   .card{background:#fff;border-radius:14px;border:1px solid var(--border);box-shadow:0 2px 10px rgba(31,92,153,0.08);padding:16px;margin-bottom:14px;}
   .card h2{font-size:13px;color:var(--navy);margin:0 0 12px;font-weight:700;display:flex;align-items:center;gap:6px;}
   .card h2::before{content:"";width:4px;height:14px;background:var(--navy);border-radius:2px;display:inline-block;}
@@ -267,8 +267,8 @@
   .empty{text-align:center;color:var(--muted);font-size:12.5px;padding:14px 0;}
   .liff-note{font-size:11px;color:var(--muted);text-align:center;padding-top:2px;}
 
-  .org-tabs{display:flex;gap:4px;background:#fff;border:1px solid var(--border);border-radius:14px;padding:4px;margin-bottom:14px;box-shadow:0 2px 10px rgba(0,0,0,0.08);}
-  .org-tab{flex:1;height:44px;border:none;border-radius:10px;background:transparent;color:var(--muted);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation;}
+  .org-tabs{display:flex;gap:6px;background:#fff;border:1px solid var(--border);border-radius:16px;padding:6px;margin-bottom:16px;box-shadow:0 2px 10px rgba(0,0,0,0.08);}
+  .org-tab{flex:1;height:48px;border:none;border-radius:12px;background:transparent;color:var(--muted);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation;}
   .org-tab.on{background:var(--navy);color:#fff;}
   .loc-radio.on[data-loc="その他"], .loc-badge[data-loc="その他"]{border-color:#8B5A3C;background:#EFECF5;color:#8B5A3C;}
   .cat-chip.on[data-cat="部活動"], .cat-badge[data-cat="部活動"]{border-color:#2563EB;background:#EAF0FE;color:#2563EB;}
