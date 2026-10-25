@@ -1,0 +1,1945 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>練習出欠確認</title>
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=2">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=2">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png?v=2">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=2">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=2">
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+  :root{
+    --navy: #1F5C99;
+    --navy-dark: #17456F;
+    --light-blue: #F2F7FC;
+    --border: #D8E4F0;
+    --ok: #2E8B57;
+    --late: #B8860B;
+    --early: #C0682B;
+    --absent: #B0413E;
+    --other: #6B5B95;
+    --muted: #7C8A99;
+    --text: #2A3540;
+  }
+  *{box-sizing:border-box;}
+  button, .chip, .cal-day, .link-btn, .remove-child{touch-action:manipulation;}
+  body{margin:0;font-family:Arial,"Hiragino Kaku Gothic ProN","Meiryo",sans-serif;background:var(--light-blue);color:var(--text);min-height:100vh;}
+  .header{background:var(--navy);color:#fff;padding:20px 20px 34px;position:relative;overflow:hidden;}
+  .header h1{margin:0;font-size:18px;font-weight:700;padding-right:78px;}
+  .header p{margin:6px 0 0;font-size:12px;opacity:0.85;}
+  .shuttle{position:absolute;right:-10px;top:-14px;width:70px;height:70px;opacity:0.18;}
+  .export-png-btn{
+    position:absolute;top:12px;right:12px;z-index:2;max-width:72px;white-space:normal;line-height:1.3;
+    background:rgba(255,255,255,0.18);color:#fff;border:1.5px solid rgba(255,255,255,0.6);
+    border-radius:8px;padding:5px 8px;font-size:10.5px;font-weight:700;cursor:pointer;touch-action:manipulation;
+  }
+  .png-modal{
+    display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:1000;
+    align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px 10px;
+  }
+  .png-modal-inner{background:#fff;border-radius:12px;padding:12px;max-width:100%;text-align:center;}
+  .png-modal-btns{display:flex;gap:8px;justify-content:center;margin-bottom:8px;}
+  .png-modal-save{
+    background:#16A34A;color:#fff;border:none;
+    border-radius:8px;padding:8px 20px;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;
+  }
+  .png-modal-close{
+    background:var(--navy);color:#fff;border:none;
+    border-radius:8px;padding:8px 20px;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;
+  }
+  .png-modal-hint{font-size:11.5px;color:var(--muted);margin-bottom:8px;}
+  .png-modal-inner img{max-width:100%;height:auto;border-radius:6px;border:1px solid var(--border);}
+  .wrap{max-width:520px;margin:-22px auto 0;padding:0 14px 40px;}
+  .card{background:#fff;border-radius:14px;border:1px solid var(--border);box-shadow:0 2px 10px rgba(31,92,153,0.08);padding:16px;margin-bottom:14px;}
+  .card h2{font-size:13px;color:var(--navy);margin:0 0 12px;font-weight:700;display:flex;align-items:center;gap:6px;}
+  .card h2::before{content:"";width:4px;height:14px;background:var(--navy);border-radius:2px;display:inline-block;}
+  label.field-label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;}
+  input[type=text], input[type=month], input[type=time]{
+    width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:8px;font-size:14.5px;font-family:inherit;color:var(--text);background:#fff;
+  }
+  .field{margin-bottom:12px;}
+  .row-between{display:flex;justify-content:space-between;align-items:center;}
+  .link-btn{background:none;border:none;color:var(--navy);font-size:12.5px;font-weight:700;cursor:pointer;padding:4px 0;}
+
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:8px;}
+  .cal-wd{text-align:center;font-size:10.5px;color:var(--muted);padding-bottom:2px;}
+  .cal-day{
+    aspect-ratio:1;display:flex;align-items:center;justify-content:center;
+    border:1.5px solid var(--border);border-radius:8px;font-size:12.5px;color:var(--muted);cursor:pointer;background:#fff;
+  }
+  .cal-day.blank{border:none;cursor:default;}
+  .cal-day.day-mon, .cal-day.day-wed, .cal-day.day-thu, .cal-day.day-fri{color:var(--muted);}
+  .cal-day.day-tue{color:#E8871E;font-weight:700;}
+  .cal-day.day-sat{color:#1F5C99;font-weight:700;}
+  .cal-day.day-sun, .cal-day.day-holiday{color:#C0392B;font-weight:700;}
+  .cal-day.active{background:var(--navy);color:#fff;border-color:var(--navy);font-weight:700;}
+  .save-btn{margin-top:10px;width:100%;background:var(--navy);color:#fff;border:none;padding:10px;border-radius:8px;font-size:13.5px;font-weight:700;cursor:pointer;}
+  .clear-all-btn{margin-top:8px;width:100%;background:#fff;color:#C0392B;border:1.5px solid #C0392B;padding:9px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;touch-action:manipulation;}
+
+  .detail-row{border:1.5px solid var(--border);border-radius:10px;padding:10px;margin-bottom:8px;}
+  .detail-row .detail-date{font-size:13px;font-weight:700;margin-bottom:8px;}
+  .detail-row.day-mon, .detail-row.day-wed, .detail-row.day-thu, .detail-row.day-fri{border-left:4px solid var(--border);}
+  .detail-row.day-tue{border-left:4px solid #E8871E;}
+  .detail-row.day-sat{border-left:4px solid #1F5C99;}
+  .detail-row.day-sun, .detail-row.day-holiday{border-left:4px solid #C0392B;}
+  .detail-row.day-tue .detail-date{color:#E8871E;}
+  .detail-row.day-sat .detail-date{color:#1F5C99;}
+  .detail-row.day-sun .detail-date, .detail-row.day-holiday .detail-date{color:#C0392B;}
+  .loc-radios{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+  .loc-radio{
+    border:1.5px solid var(--border);border-radius:20px;padding:5px 11px;font-size:12px;font-weight:700;
+    cursor:pointer;color:var(--muted);background:#fff;touch-action:manipulation;
+  }
+  .loc-radio.on{border-color:var(--navy);background:var(--light-blue);color:var(--navy);}
+  .loc-radio.on[data-loc="六コミ"], .loc-badge[data-loc="六コミ"]{border-color:#2563EB;background:#EAF0FE;color:#2563EB;}
+  .loc-radio.on[data-loc="武道館"], .loc-badge[data-loc="武道館"]{border-color:#7C3AED;background:#F1EAFC;color:#7C3AED;}
+  .loc-radio.on[data-loc="宝田"], .loc-badge[data-loc="宝田"]{border-color:#0D9488;background:#E3F5F3;color:#0D9488;}
+  .loc-radio.on[data-loc="櫛スポ"], .loc-badge[data-loc="櫛スポ"]{border-color:#EA580C;background:#FDEEE4;color:#EA580C;}
+  .loc-radio.on[data-loc="羽黒体"], .loc-badge[data-loc="羽黒体"]{border-color:#16A34A;background:#E7F7ED;color:#16A34A;}
+  .loc-radio.on[data-loc="藤島体"], .loc-badge[data-loc="藤島体"]{border-color:#DB2777;background:#FCE9F1;color:#DB2777;}
+  .loc-radio.on[data-loc="アリーナ"], .loc-badge[data-loc="アリーナ"]{border-color:#4F46E5;background:#EBEAFC;color:#4F46E5;}
+  .loc-radio.on[data-loc="多目的"], .loc-badge[data-loc="多目的"]{border-color:#B45309;background:#FBF0E4;color:#B45309;}
+  .loc-radio.on[data-loc="カスタム"], .loc-badge[data-loc="カスタム"]{border-color:#57534E;background:#F0EFED;color:#57534E;}
+  .loc-badge{display:inline-block;border:1.5px solid var(--border);border-radius:10px;padding:1px 9px;font-size:11px;font-weight:700;margin-right:6px;}
+  .detail-row input[type=time]{width:120px;margin-bottom:8px;}
+  .time-range{display:flex;align-items:center;gap:6px;margin-bottom:8px;}
+  .allday-btn{
+    border:1.5px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;
+    color:var(--muted);background:#fff;cursor:pointer;touch-action:manipulation;white-space:nowrap;
+  }
+  .allday-btn.on{border-color:#16A34A;background:#E7F7ED;color:#16A34A;}
+  .time-range input[type=time]{margin-bottom:0;}
+  .time-range .tlabel{font-size:12px;color:var(--muted);}
+  .detail-row input[type=text]{width:100%;}
+  .summary-textarea{
+    width:100%;min-height:70px;padding:9px 11px;border:1px solid var(--border);border-radius:8px;
+    font-size:13.5px;font-family:inherit;color:var(--text);background:#fff;resize:vertical;
+  }
+  #announcementCard ul{margin:0 0 10px;padding-left:18px;font-size:13px;color:var(--text);}
+  #announcementCard .announce-label{font-size:11.5px;color:var(--muted);font-weight:700;margin-bottom:4px;}
+  .date-meta{font-size:13.5px;font-weight:600;color:var(--muted);margin:-2px 0 8px;}
+  .date-note{
+    background:#FFF7E0;border-left:3px solid var(--late);border-radius:6px;
+    padding:6px 10px;font-size:12.5px;font-weight:600;color:var(--text);margin:0 0 8px;
+  }
+  .duty-line{
+    background:#EFECF5;border-left:3px solid var(--other);border-radius:6px;
+    padding:6px 10px;font-size:12.5px;font-weight:600;color:var(--text);margin:8px 0 0;
+  }
+
+  .slot-card{border:1.5px solid var(--border);border-radius:10px;padding:10px;margin-bottom:10px;background:#fff;}
+  .slot-card.slot-color-0{border-left:4px solid var(--navy);}
+  .slot-card.slot-color-1{border-left:4px solid #C0682B;}
+  .slot-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+  .slot-title{font-size:12.5px;font-weight:700;color:var(--navy);}
+  .slot-color-1 .slot-title{color:#C0682B;}
+  .remove-slot-btn{background:none;border:none;color:var(--early);font-size:11.5px;cursor:pointer;touch-action:manipulation;}
+  .add-slot-btn{
+    width:100%;border:1.5px dashed var(--border);background:#fff;color:var(--navy);
+    padding:8px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;margin-bottom:8px;touch-action:manipulation;
+  }
+  .cat-chips, .coach-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+  .cat-chip, .coach-chip{
+    border:1.5px solid var(--border);border-radius:20px;padding:4px 10px;font-size:11.5px;font-weight:700;
+    cursor:pointer;color:var(--muted);background:#fff;touch-action:manipulation;
+  }
+  .cat-chip.on[data-cat="1班"], .cat-badge[data-cat="1班"]{border-color:#2563EB;background:#EAF0FE;color:#2563EB;}
+  .cat-chip.on[data-cat="2班"], .cat-badge[data-cat="2班"]{border-color:#7C3AED;background:#F1EAFC;color:#7C3AED;}
+  .cat-chip.on[data-cat="3班"], .cat-badge[data-cat="3班"]{border-color:#0D9488;background:#E3F5F3;color:#0D9488;}
+  .cat-chip.on[data-cat="全員"], .cat-badge[data-cat="全員"]{border-color:#16A34A;background:#E7F7ED;color:#16A34A;}
+  .cat-chip.on[data-cat="選抜"], .cat-badge[data-cat="選抜"]{border-color:#EA580C;background:#FDEEE4;color:#EA580C;}
+  .cat-chip.on[data-cat="オープン"], .cat-badge[data-cat="オープン"]{border-color:#DB2777;background:#FCE8F1;color:#DB2777;}
+  .open-note{font-size:11.5px;font-weight:700;color:#B4235F;background:#FCE8F1;border-radius:6px;padding:4px 8px;margin:4px 0 8px;}
+  .cat-chip.on[data-cat="カスタム"], .cat-badge[data-cat="カスタム"]{border-color:#57534E;background:#F0EFED;color:#57534E;}
+  .coach-chip.on[data-coach="監督"], .coach-badge[data-coach="監督"]{border-color:#2563EB;background:#EAF0FE;color:#2563EB;}
+  .coach-chip.on[data-coach="武田"], .coach-badge[data-coach="武田"]{border-color:#7C3AED;background:#F1EAFC;color:#7C3AED;}
+  .coach-chip.on[data-coach="大川"], .coach-badge[data-coach="大川"]{border-color:#0D9488;background:#E3F5F3;color:#0D9488;}
+  .coach-chip.on[data-coach="工藤"], .coach-badge[data-coach="工藤"]{border-color:#EA580C;background:#FDEEE4;color:#EA580C;}
+  .coach-chip.on[data-coach="志布"], .coach-badge[data-coach="志布"]{border-color:#16A34A;background:#E7F7ED;color:#16A34A;}
+  .coach-chip.on[data-coach="杉山"], .coach-badge[data-coach="杉山"]{border-color:#B45309;background:#FBF0E4;color:#B45309;}
+  .coach-chip.on[data-coach="石黒"], .coach-badge[data-coach="石黒"]{border-color:#DB2777;background:#FCE9F1;color:#DB2777;}
+  .coach-chip.on[data-coach="カスタム"], .coach-badge[data-coach="カスタム"]{border-color:#57534E;background:#F0EFED;color:#57534E;}
+  .cat-badge, .coach-badge{
+    display:inline-block;border:1.5px solid var(--border);border-radius:10px;padding:1px 8px;
+    font-size:10.5px;font-weight:700;margin-right:5px;
+  }
+  .cat-line{margin:0 0 8px;}
+  .coach-line{font-size:11.5px;color:var(--muted);margin:-2px 0 8px;}
+  .school-note-chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .school-note-chip{
+    border:1.5px solid var(--border);border-radius:20px;padding:4px 10px;font-size:11.5px;font-weight:700;
+    cursor:pointer;color:var(--muted);background:#fff;touch-action:manipulation;
+  }
+  .school-note-chip.on{border-color:#C0392B;background:#FBE9E8;color:#C0392B;}
+  .school-note-line{margin:-2px 0 8px;}
+  .school-note-badge{
+    display:inline-block;border:1.5px solid #C0392B;border-radius:10px;padding:1px 8px;
+    font-size:10.5px;font-weight:700;color:#C0392B;background:#FBE9E8;margin-right:5px;
+  }
+
+  .slot-attend-block{border:1.5px solid var(--border);border-radius:10px;padding:10px;margin-bottom:10px;}
+  .slot-attend-block.slot-color-0{border-left:4px solid var(--navy);}
+  .slot-attend-block.slot-color-1{border-left:4px solid #C0682B;}
+  .slot-attend-block .slot-title{margin-bottom:6px;}
+
+  .child-block{border:1.5px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px;}
+  .child-block .row-between{margin-bottom:10px;}
+  .remove-child{color:var(--early);background:none;border:none;font-size:12px;cursor:pointer;touch-action:manipulation;}
+  .clear-child-btn{
+    margin-top:10px;width:100%;background:#fff;color:#C0392B;border:1.5px solid #C0392B;
+    padding:8px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;touch-action:manipulation;
+  }
+  .date-row{border-bottom:1px solid var(--border);padding:10px 2px;}
+  .date-row:last-child{border-bottom:none;}
+  .date-row .date-label{font-size:15.5px;font-weight:700;margin-bottom:6px;}
+  .date-row.day-mon, .summary-date.day-mon,
+  .date-row.day-wed, .summary-date.day-wed,
+  .date-row.day-thu, .summary-date.day-thu,
+  .date-row.day-fri, .summary-date.day-fri{border-left:4px solid var(--border);padding-left:8px;}
+  .date-row.day-tue, .summary-date.day-tue{border-left:4px solid #E8871E;padding-left:8px;}
+  .date-row.day-sat, .summary-date.day-sat{border-left:4px solid #1F5C99;padding-left:8px;}
+  .date-row.day-sun, .summary-date.day-sun, .date-row.day-holiday, .summary-date.day-holiday{border-left:4px solid #C0392B;padding-left:8px;}
+  .date-row.day-tue .date-label, .summary-date.day-tue .d-title{color:#E8871E;}
+  .date-row.day-sat .date-label, .summary-date.day-sat .d-title{color:#1F5C99;}
+  .date-row.day-sun .date-label, .summary-date.day-sun .d-title,
+  .date-row.day-holiday .date-label, .summary-date.day-holiday .d-title{color:#C0392B;}
+  .holiday-name{font-size:11px;font-weight:700;color:#C0392B;margin-left:6px;}
+  .today-badge{
+    display:inline-block;background:var(--navy);color:#fff;font-size:10.5px;font-weight:700;
+    border-radius:10px;padding:1px 9px;margin-left:8px;vertical-align:middle;
+  }
+  .next-badge{
+    display:inline-block;background:#fff;color:var(--navy);border:1.5px solid var(--navy);
+    font-size:10.5px;font-weight:700;border-radius:10px;padding:1px 9px;margin-left:8px;vertical-align:middle;
+  }
+  .chips{display:flex;gap:6px;flex-wrap:wrap;}
+  .chip{
+    border:1.5px solid var(--border);border-radius:20px;padding:6px 12px;font-size:12.5px;font-weight:700;cursor:pointer;color:var(--muted);background:#fff;
+  }
+  .chip.on[data-type="attend"]{border-color:var(--ok);background:#EAF6EE;color:var(--ok);}
+  .chip.on[data-type="absent"]{border-color:var(--absent);background:#FBE9E8;color:var(--absent);}
+  .chip.on[data-type="late"]{border-color:var(--late);background:#FBF3E1;color:var(--late);}
+  .chip.on[data-type="early"]{border-color:var(--early);background:#FCEDE4;color:var(--early);}
+  .chip.on[data-type="other"]{border-color:var(--other);background:#EFECF5;color:var(--other);}
+  .time-inline{display:none;align-items:center;gap:6px;margin-top:6px;}
+  .time-inline.show{display:flex;}
+  .time-inline input{width:120px;}
+  .time-inline .tlabel{font-size:12px;color:var(--muted);}
+  .other-inline{display:none;margin-top:6px;}
+  .other-inline.show{display:block;}
+  .other-inline input{width:100%;}
+
+  .add-child-btn{width:100%;border:1.5px dashed var(--border);background:#fff;color:var(--navy);padding:10px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:12px;}
+  .submit-btn{width:100%;background:var(--navy);color:#fff;border:none;padding:13px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;}
+  .status-msg{font-size:12.5px;text-align:center;margin-top:10px;color:var(--muted);}
+
+  .answered-count{
+    font-size:13px;font-weight:700;color:var(--navy);background:var(--light-blue);
+    border-radius:8px;padding:8px 12px;margin-bottom:10px;
+  }
+  .summary-date{padding:10px 4px;border-bottom:1px solid var(--border);}
+  .summary-date:last-child{border-bottom:none;}
+  .summary-date .d-title{font-size:15.5px;font-weight:700;margin-bottom:8px;}
+  .summary-date > .slot-color-0{border-left:4px solid var(--navy);padding:4px 0 8px 10px;margin-bottom:8px;}
+  .summary-date > .slot-color-1{border-left:4px solid #C0682B;padding:4px 0 8px 10px;margin-bottom:8px;}
+  .status-group{margin-bottom:8px;}
+  .status-group:last-child{margin-bottom:0;}
+  .status-group .group-label{
+    display:inline-flex;align-items:center;gap:5px;
+    font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;margin-bottom:5px;
+  }
+  .status-group .group-names{font-size:12.5px;color:var(--text);line-height:1.6;padding-left:2px;}
+  .status-group .group-names .name-item{padding:2px 0;}
+  .group-label.attend{background:#EAF6EE;color:var(--ok);}
+  .group-label.absent{background:#FBE9E8;color:var(--absent);}
+  .group-label.late{background:#FBF3E1;color:var(--late);}
+  .group-label.early{background:#FCEDE4;color:var(--early);}
+  .group-label.other{background:#EFECF5;color:var(--other);}
+  .empty{text-align:center;color:var(--muted);font-size:12.5px;padding:14px 0;}
+  .liff-note{font-size:11px;color:var(--muted);text-align:center;padding-top:2px;}
+
+  .org-tabs{display:flex;gap:4px;background:#fff;border:1px solid var(--border);border-radius:14px;padding:4px;margin-bottom:14px;box-shadow:0 2px 10px rgba(0,0,0,0.08);}
+  .org-tab{flex:1;height:44px;border:none;border-radius:10px;background:transparent;color:var(--muted);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation;}
+  .org-tab.on{background:var(--navy);color:#fff;}
+  .loc-radio.on[data-loc="その他"], .loc-badge[data-loc="その他"]{border-color:#8B5A3C;background:#EFECF5;color:#8B5A3C;}
+  .cat-chip.on[data-cat="部活動"], .cat-badge[data-cat="部活動"]{border-color:#2563EB;background:#EAF0FE;color:#2563EB;}
+  .cat-chip.on[data-cat="区分A"], .cat-badge[data-cat="区分A"]{border-color:#7C3AED;background:#F1EAFC;color:#7C3AED;}
+  .cat-chip.on[data-cat="区分B"], .cat-badge[data-cat="区分B"]{border-color:#0D9488;background:#E3F5F3;color:#0D9488;}
+  .cat-chip.on[data-cat="小学生"], .cat-badge[data-cat="小学生"]{border-color:#EA580C;background:#FDEEE4;color:#EA580C;}
+  .coach-chip.on[data-coach="遠藤"], .coach-badge[data-coach="遠藤"]{border-color:#16A34A;background:#E7F7ED;color:#16A34A;}
+  .coach-chip.on[data-coach="石川"], .coach-badge[data-coach="石川"]{border-color:#DB2777;background:#FCE9F1;color:#DB2777;}
+  .coach-chip.on[data-coach="菅原"], .coach-badge[data-coach="菅原"]{border-color:#4F46E5;background:#EBEAFC;color:#4F46E5;}
+  .coach-chip.on[data-coach="後藤"], .coach-badge[data-coach="後藤"]{border-color:#57534E;background:#F0EFED;color:#57534E;}
+  .org-tag{display:inline-block;color:#fff;font-size:10.5px;font-weight:700;border-radius:8px;padding:1px 7px;margin-right:6px;vertical-align:middle;}
+  .merged-note{font-size:11.5px;font-weight:700;color:var(--navy);background:var(--light-blue);border-radius:6px;padding:4px 8px;margin:0 0 8px;}
+  .setup-banner{background:#FBE9E8;border:1.5px solid #C0392B;color:#C0392B;border-radius:10px;padding:10px 12px;font-size:12.5px;font-weight:700;margin-bottom:14px;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <svg class="shuttle" viewBox="0 0 100 100" fill="#fff">
+    <circle cx="50" cy="20" r="12"/>
+    <path d="M50 32 L30 85 M50 32 L50 88 M50 32 L70 85" stroke="#fff" stroke-width="3" fill="none"/>
+  </svg>
+  <button class="export-png-btn" onclick="exportCalendarPNG()">練習日程表を表示</button>
+  <h1 id="orgTitle"></h1>
+  <p id="userGreeting">LINEで読み込み中…</p>
+</div>
+
+<div id="pngModal" class="png-modal">
+  <div class="png-modal-inner">
+    <div class="png-modal-btns">
+      <button class="png-modal-save" onclick="saveCalendarPNG()">保存・共有</button>
+      <button class="png-modal-close" onclick="closePngModal()">閉じる</button>
+    </div>
+    <div class="png-modal-hint">「保存・共有」でうまくいかない場合は、画面のスクリーンショットで保存してください</div>
+    <img id="pngModalImg" alt="練習日程表">
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="org-tabs" id="orgTabs" role="group" aria-label="団体の切り替え"></div>
+
+  <div class="card">
+    <div class="row-between">
+      <h2 style="margin-bottom:0;">対象月</h2>
+      <button class="link-btn" id="adminToggle" onclick="toggleAdmin()">練習日程登録（コーチ用）</button>
+    </div>
+    <div class="field" style="margin-top:10px;">
+      <input type="month" id="monthInput">
+    </div>
+    <div id="adminPanel" style="display:none;">
+      <label class="field-label">練習日をタップして設定（コーチ用）</label>
+      <div class="cal-grid" id="calGrid"></div>
+      <div id="dateDetailList" style="margin-top:10px;"></div>
+      <button class="save-btn" onclick="savePracticeDates()">この月の練習日を保存</button>
+      <button class="clear-all-btn" onclick="clearAllPracticeDates()">この月の練習日をすべてクリア</button>
+
+      <label class="field-label" style="margin-top:16px;">出欠データの書き出し（コーチ用）</label>
+      <button class="save-btn" onclick="downloadCSV()">この月の出欠をCSVでダウンロード</button>
+      <button class="clear-all-btn" style="color:var(--navy);border-color:var(--navy);" onclick="copyCSV()">CSVをコピー（LINE内でダウンロードできない時）</button>
+
+      <label class="field-label" style="margin-top:16px;">今月のお知らせ（コーチ用・箇条書き）</label>
+      <textarea id="currentMonthSummaryInput" class="summary-textarea" placeholder="例：連絡事項を入れてください"></textarea>
+      <label class="field-label" style="margin-top:10px;">来月のお知らせ（コーチ用・箇条書き）</label>
+      <textarea id="nextMonthSummaryInput" class="summary-textarea" placeholder="例：連絡事項を入れてください"></textarea>
+      <button class="save-btn" onclick="saveMonthSummary()">サマリーを保存</button>
+    </div>
+  </div>
+
+  <div class="card" id="announcementCard" style="display:none;">
+    <h2>お知らせ</h2>
+    <div id="currentMonthSummaryDisplay"></div>
+    <div id="nextMonthSummaryDisplay"></div>
+  </div>
+
+  <div id="childrenContainer"></div>
+  <button class="add-child-btn" onclick="addChild()">＋ お子様を追加（兄弟対応）</button>
+
+  <div class="card">
+    <button class="submit-btn" id="submitBtn" onclick="submitAll()">この月の出欠をまとめて送信</button>
+    <div class="status-msg" id="statusMsg"></div>
+  </div>
+
+  <div class="card">
+    <h2>今月の全体状況</h2>
+    <div id="summaryContainer"><div class="empty">読み込み中…</div></div>
+  </div>
+
+  <div class="liff-note" id="orgFooter"></div>
+</div>
+
+<script>
+// ▼▼ Firebaseコンソールの「プロジェクトの設定 → マイアプリ」に出る firebaseConfig を貼り付けてください ▼▼
+const FIREBASE_CONFIG = {
+  apiKey: 'AIzaSyBhHqHe4q5UILpn586NRFbAOUNYVH6jzXY',
+  authDomain: 'bc-attendance-2e692.firebaseapp.com',
+  projectId: 'bc-attendance-2e692',
+  storageBucket: 'bc-attendance-2e692.firebasestorage.app',
+  messagingSenderId: '747216824846',
+  appId: '1:747216824846:web:fdbcb58192c8cec6e02a5f'
+};
+// ▲▲ ---------------------------------------------------------- ▲▲
+
+const LIFF_ID = '2010702649-TZgYQpoY'; // 統合アプリ用のLIFF ID（当面はBC鶴岡のものを流用）
+
+// ---- 団体ごとの設定 ----
+const COMMON_LOCATIONS = ['六コミ', '武道館', '宝田', 'アリーナ', '櫛スポ', '羽黒体', '藤島体'];
+const ORGS = {
+  bc: {
+    id: 'bc', tab: 'BC鶴岡', title: 'BC鶴岡 練習出欠確認', footer: 'BC鶴岡 練習管理',
+    pngTitle: 'BC鶴岡 練習予定表', pngName: 'BC鶴岡練習予定表',
+    theme: { 'navy': '#0F766E', 'navy-dark': '#0B5C56', 'light-blue': '#F0FAF9', 'border': '#D7ECE9', 'ok': '#2E8B57', 'late': '#B8860B', 'early': '#C0682B', 'absent': '#B0413E', 'other': '#6B5B95', 'muted': '#6B8683', 'text': '#1F3A38' },
+    locations: [...COMMON_LOCATIONS, 'その他'], customLoc: 'その他',
+    categories: ['部活動', '区分A', '区分B', '小学生', 'オープン'],
+    coaches: ['杉山', '武田', '大川', '遠藤', '石川', '菅原', '後藤'],
+    schoolNotes: ['部停止', 'テスト期間', '学校行事'],
+    maxSlots: 2, parentDuty: false, defaultCategories: [],
+    weekdayDefaults: {
+      0: { location: '六コミ', startTime: '13:00', endTime: '17:00', categories: ['区分A', '小学生'] },
+      1: { location: '武道館', startTime: '19:00', endTime: '21:15', categories: ['区分A', '小学生'] },
+      2: { location: 'アリーナ', startTime: '19:00', endTime: '21:00', categories: ['区分A', '小学生'] },
+      3: { location: '宝田', startTime: '19:00', endTime: '21:15', categories: ['区分A', '小学生'] },
+      4: { location: 'アリーナ', startTime: '19:00', endTime: '21:00', categories: ['区分A', '小学生'] },
+      5: { location: '六コミ', startTime: '15:30', endTime: '19:00', categories: ['区分A', '区分B'] },
+      6: { location: '六コミ', startTime: '09:00', endTime: '12:00', categories: ['区分A', '小学生'] }
+    },
+    secondSlot: { location: '六コミ', startTime: '15:30', endTime: '19:00', categories: [], coaches: ['杉山'] }
+  },
+  tsururoku: {
+    id: 'tsururoku', tab: '鶴六', title: '鶴岡六学区バドミントンスポーツ少年団 練習出欠確認', footer: '鶴岡六学区バドミントンスポーツ少年団 練習管理',
+    pngTitle: '鶴六バド練習予定表', pngName: '鶴六練習予定表',
+    theme: { 'navy': '#1F5C99', 'navy-dark': '#17456F', 'light-blue': '#F2F7FC', 'border': '#D8E4F0', 'ok': '#2E8B57', 'late': '#B8860B', 'early': '#C0682B', 'absent': '#B0413E', 'other': '#6B5B95', 'muted': '#7C8A99', 'text': '#2A3540' },
+    locations: [...COMMON_LOCATIONS, '多目的', 'カスタム'], customLoc: 'カスタム',
+    categories: ['全員', '選抜', 'カスタム', '1班', '2班', '3班', 'オープン'],
+    coaches: ['監督', '武田', '大川', '工藤', '志布', '杉山', '石黒', 'カスタム'],
+    schoolNotes: [],
+    maxSlots: 2, parentDuty: true, defaultCategories: ['全員'],
+    weekdayDefaults: {
+      0: { location: '六コミ', startTime: '09:00', endTime: '13:00', coaches: ['監督'] },
+      2: { location: 'アリーナ', startTime: '19:00', endTime: '21:00', coaches: ['監督'] },
+      4: { location: 'アリーナ', startTime: '19:00', endTime: '21:00', coaches: ['監督'] },
+      6: { location: '六コミ', startTime: '18:30', endTime: '20:30', coaches: ['監督'] }
+    },
+    secondSlot: { location: '六コミ', startTime: '15:30', endTime: '19:00', categories: ['全員'], coaches: ['監督'] }
+  },
+  skh: {
+    id: 'skh', tab: 'SKH', title: 'SKHバドクラブ 練習出欠確認', footer: 'SKHバドクラブ 練習管理',
+    pngTitle: 'SKHバドクラブ 練習予定表', pngName: 'SKH練習予定表',
+    theme: { 'navy': '#C2410C', 'navy-dark': '#9A3412', 'light-blue': '#FFF8F0', 'border': '#F0DFC8', 'ok': '#6B8E23', 'late': '#B8860B', 'early': '#C0682B', 'absent': '#B0413E', 'other': '#8B5A3C', 'muted': '#9C8B7A', 'text': '#3D2E22' },
+    locations: [...COMMON_LOCATIONS, 'その他'], customLoc: 'その他',
+    categories: [], coaches: [], schoolNotes: [],
+    maxSlots: 1, parentDuty: false, defaultCategories: [],
+    weekdayDefaults: {},
+    secondSlot: { location: '', startTime: '19:00', endTime: '21:00', categories: [], coaches: [] }
+  }
+};
+const ORG_ORDER = ['bc', 'tsururoku', 'skh'];
+
+let ORG = ORGS.bc;
+let LOCATIONS = ORG.locations, CUSTOM_LOC = ORG.customLoc, CATEGORIES = ORG.categories, COACHES = ORG.coaches;
+let SCHOOL_NOTES = ORG.schoolNotes, MAX_SLOTS = ORG.maxSlots;
+
+let lineDisplayName = null;
+let practiceDates = []; // array of {date, parentDuty, slots: [{location, customLocation, startTime, endTime, allDay, categories, coaches, message, schoolNotes}, ...]}
+let adminSelection = new Map(); // date -> {parentDuty, slots: [...]}
+let lastCalendarPNG = null; // { dataUrl, filename } of the most recently generated schedule image
+let childCounter = 0;
+let liffReadyPromise = Promise.resolve();
+
+// ---- Firestore（Apps Scriptの apiGet / apiPost と同じ形で呼べるアダプタ） ----
+let db = null, authReady = null;
+function isFirebaseConfigured(){
+  return !!FIREBASE_CONFIG.apiKey && !String(FIREBASE_CONFIG.apiKey).startsWith('ここ');
+}
+function initFirebase(){
+  if(!isFirebaseConfigured() || typeof firebase === 'undefined'){
+    authReady = Promise.reject(new Error('Firebaseの設定が未入力です'));
+    authReady.catch(() => {});
+    return;
+  }
+  firebase.initializeApp(FIREBASE_CONFIG);
+  db = firebase.firestore();
+  db.settings({ experimentalAutoDetectLongPolling: true, merge: true });
+  authReady = firebase.auth().signInAnonymously();
+  authReady.catch(e => console.error(e));
+}
+function monthRef(orgId, ym){ return db.collection('orgs').doc(orgId).collection('months').doc(ym); }
+function attendanceDocId(name){ return encodeURIComponent(name).replace(/\./g, '%2E'); }
+
+async function apiGet(action, params){
+  await authReady;
+  const orgId = params.org || ORG.id; // 他団体の合同表示用に org を指定できる
+  const ym = params.month;
+  if(action === 'getPracticeDates'){
+    const snap = await monthRef(orgId, ym).get();
+    return { dates: (snap.exists && snap.data().dates) || [] };
+  }
+  if(action === 'getMonthSummary'){
+    const snap = await monthRef(orgId, ym).get();
+    const d = snap.exists ? snap.data() : {};
+    return { currentSummary: d.currentSummary || '', nextSummary: d.nextSummary || '' };
+  }
+  if(action === 'getAttendanceList'){
+    const qs = await monthRef(orgId, ym).collection('attendance').get();
+    return { submissions: qs.docs.map(doc => {
+      const x = doc.data();
+      return { name: x.name, submitterLineName: x.submitterLineName || '', days: x.days || {}, updatedAt: x.updatedAt || '' };
+    }) };
+  }
+  throw new Error('unknown action: ' + action);
+}
+async function apiPost(payload){
+  await authReady;
+  const orgId = ORG.id;
+  const ym = payload.month;
+  const now = new Date().toISOString();
+  if(payload.action === 'savePracticeDates'){
+    await monthRef(orgId, ym).set({ dates: payload.dates, updatedAt: now }, { merge: true });
+    return { ok: true };
+  }
+  if(payload.action === 'saveMonthSummary'){
+    await monthRef(orgId, ym).set({ currentSummary: payload.currentSummary || '', nextSummary: payload.nextSummary || '', updatedAt: now }, { merge: true });
+    return { ok: true };
+  }
+  if(payload.action === 'saveAttendance'){
+    await monthRef(orgId, ym).collection('attendance').doc(attendanceDocId(payload.name)).set({
+      name: payload.name, submitterLineName: payload.submitterLineName || '', days: payload.days || {}, updatedAt: now
+    });
+    return { ok: true };
+  }
+  if(payload.action === 'clearAttendance'){
+    // 過去の日付の回答は残し、今日以降の回答だけ消す（全体状況・CSVの履歴を守る）
+    const ref = monthRef(orgId, ym).collection('attendance').doc(attendanceDocId(payload.name));
+    const snap = await ref.get();
+    if(!snap.exists) return { ok: true };
+    const t = new Date();
+    const today = t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
+    const days = (snap.data() || {}).days || {};
+    const keep = {};
+    Object.keys(days).forEach(d => { if(d < today) keep[d] = days[d]; });
+    if(Object.keys(keep).length === 0) await ref.delete();
+    else await ref.update({ days: keep, updatedAt: new Date().toISOString() });
+    return { ok: true };
+  }
+  throw new Error('unknown action: ' + payload.action);
+}
+
+// 同じ月の出欠一覧を複数箇所（全体状況・各お子様の前回回答復元）から取得する際、
+// 通信を1回にまとめて共有するためのキャッシュ。
+let attendanceListCache = { month: null, promise: null };
+function getAttendanceListShared(ym){
+  if(attendanceListCache.month === ym && attendanceListCache.promise){
+    return attendanceListCache.promise;
+  }
+  const p = apiGet('getAttendanceList', { month: ym });
+  attendanceListCache = { month: ym, promise: p };
+  p.catch(() => { attendanceListCache = { month: null, promise: null }; }); // 失敗時は再取得できるようキャッシュを捨てる
+  return p;
+}
+function invalidateAttendanceListCache(){
+  attendanceListCache = { month: null, promise: null };
+  otherOrgsCache = { key: null, promise: null };
+}
+
+// 同じ日・同じ会場の合同表示のため、他の団体の練習日程と出欠もまとめて取得して共有する。
+let otherOrgsCache = { key: null, promise: null };
+function getOtherOrgsShared(ym){
+  const key = ORG.id + ':' + ym;
+  if(otherOrgsCache.key === key && otherOrgsCache.promise) return otherOrgsCache.promise;
+  const ids = ORG_ORDER.filter(id => id !== ORG.id);
+  const p = Promise.all(ids.map(async id => {
+    const [d, a] = await Promise.all([
+      apiGet('getPracticeDates', { month: ym, org: id }),
+      apiGet('getAttendanceList', { month: ym, org: id })
+    ]);
+    return { id, practiceDates: normalizePracticeDates(d.dates), submissions: a.submissions || [] };
+  }));
+  otherOrgsCache = { key, promise: p };
+  p.catch(() => { otherOrgsCache = { key: null, promise: null }; });
+  return p;
+}
+function venueLabelOf(slot, customKey){
+  if(!slot || !slot.location) return '';
+  return (slot.location === customKey && slot.customLocation) ? slot.customLocation : slot.location;
+}
+function sameVenue(slotA, customKeyA, slotB, customKeyB){
+  const a = venueLabelOf(slotA, customKeyA), b = venueLabelOf(slotB, customKeyB);
+  return !!a && a === b;
+}
+
+const WD = ['日','月','火','水','木','金','土'];
+
+function currentMonthStr(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+document.getElementById('monthInput').value = currentMonthStr();
+
+function daysInMonth(ym){
+  const [y,m] = ym.split('-').map(Number);
+  return new Date(y, m, 0).getDate();
+}
+function firstWeekday(ym){
+  const [y,m] = ym.split('-').map(Number);
+  return new Date(y, m-1, 1).getDay();
+}
+function dateStr(ym, day){
+  const [y,m] = ym.split('-').map(Number);
+  return `${y}-${String(m).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+}
+function weekdayOf(dstr){
+  return WD[new Date(dstr+'T00:00:00').getDay()];
+}
+function shortLabel(dstr){
+  const parts = dstr.split('-');
+  return `${parseInt(parts[1])}/${parseInt(parts[2])}(${weekdayOf(dstr)})`;
+}
+
+// 日本の祝日データ（年ごとにキャッシュ）
+let holidaysCache = {};
+async function loadHolidaysForYear(year){
+  if(holidaysCache[year]) return holidaysCache[year];
+  try{
+    const res = await fetch(`https://holidays-jp.github.io/api/v1/${year}/date.json`);
+    const data = await res.json();
+    holidaysCache[year] = data || {};
+  }catch(e){
+    console.error(e);
+    holidaysCache[year] = {};
+  }
+  return holidaysCache[year];
+}
+async function ensureHolidaysLoaded(dates){
+  const years = new Set(dates.map(ds => ds.split('-')[0]));
+  await Promise.all(Array.from(years).map(y => loadHolidaysForYear(y)));
+}
+function holidayNameFor(ds){
+  const year = ds.split('-')[0];
+  const map = holidaysCache[year];
+  return map ? (map[ds] || null) : null;
+}
+function dayClassFor(ds){
+  const holidayName = holidayNameFor(ds);
+  if(holidayName) return 'day-holiday';
+  const weekday = new Date(ds + 'T00:00:00').getDay();
+  const map = ['day-sun', 'day-mon', 'day-tue', 'day-wed', 'day-thu', 'day-fri', 'day-sat'];
+  return map[weekday];
+}
+function dateLabelWithHoliday(ds){
+  const holidayName = holidayNameFor(ds);
+  return `${shortLabel(ds)}${holidayName ? `<span class="holiday-name">${escapeHtml(holidayName)}</span>` : ''}`;
+}
+
+function getTodayStr(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function computeNextPracticeDate(dates){
+  const todayStr = getTodayStr();
+  const upcoming = dates.filter(d => d >= todayStr).sort();
+  return upcoming.length > 0 ? upcoming[0] : null;
+}
+function dateBadgeFor(ds, todayStr, nextDate){
+  if(ds === todayStr) return '<span class="today-badge">今日</span>';
+  if(ds === nextDate) return '<span class="next-badge">次回</span>';
+  return '';
+}
+
+function defaultSlot(){
+  return { location: '', customLocation: '', startTime: '19:00', endTime: '21:00', allDay: false, categories: [...ORG.defaultCategories], customCategory: '', coaches: [], customCoach: '', message: '', schoolNotes: [] };
+}
+function defaultSlotForDate(ds){
+  const weekday = new Date(ds + 'T00:00:00').getDay();
+  const wd = ORG.weekdayDefaults[weekday];
+  const base = defaultSlot();
+  if(wd) return { ...base, location: wd.location, startTime: wd.startTime, endTime: wd.endTime, categories: wd.categories ? [...wd.categories] : base.categories, coaches: [...(wd.coaches || [])] };
+  return base;
+}
+
+async function toggleAdmin(){
+  const panel = document.getElementById('adminPanel');
+  const show = panel.style.display === 'none';
+  panel.style.display = show ? 'block' : 'none';
+  if(show){
+    adminSelection = new Map(practiceDates.map(pd => [pd.date, {
+      parentDuty: pd.parentDuty || '',
+      slots: pd.slots.map(s => ({ ...s, categories: [...(s.categories||[])], coaches: [...(s.coaches||[])], schoolNotes: [...(s.schoolNotes||[])] }))
+    }]));
+    const ym = document.getElementById('monthInput').value;
+    const total = daysInMonth(ym);
+    const allDatesInMonth = [];
+    for(let d=1; d<=total; d++) allDatesInMonth.push(dateStr(ym, d));
+    await ensureHolidaysLoaded(allDatesInMonth);
+    renderCalGrid();
+    renderDateDetailList();
+    loadMonthSummaryIntoInputs();
+  }
+}
+
+function renderCalGrid(){
+  const ym = document.getElementById('monthInput').value;
+  const grid = document.getElementById('calGrid');
+  const total = daysInMonth(ym);
+  const offset = firstWeekday(ym);
+  let html = WD.map(w => `<div class="cal-wd">${w}</div>`).join('');
+  for(let i=0;i<offset;i++) html += `<div class="cal-day blank"></div>`;
+  for(let d=1; d<=total; d++){
+    const ds = dateStr(ym, d);
+    const active = adminSelection.has(ds) ? 'active' : '';
+    html += `<div class="cal-day ${active} ${dayClassFor(ds)}" data-date="${ds}" onclick="toggleCalDay('${ds}')">${d}</div>`;
+  }
+  grid.innerHTML = html;
+}
+function toggleCalDay(ds){
+  if(adminSelection.has(ds)) adminSelection.delete(ds);
+  else adminSelection.set(ds, { parentDuty: '', slots: [defaultSlotForDate(ds)] });
+  renderCalGrid();
+  renderDateDetailList();
+}
+
+function renderDateDetailList(){
+  const container = document.getElementById('dateDetailList');
+  const dates = Array.from(adminSelection.keys()).sort();
+  if(dates.length === 0){
+    container.innerHTML = '';
+    return;
+  }
+  container.innerHTML = dates.map(ds => {
+    const detail = adminSelection.get(ds);
+    const slotsHtml = detail.slots.map((slot, idx) => renderSlotEditor(ds, slot, idx, detail.slots.length)).join('');
+    const addBtn = detail.slots.length < MAX_SLOTS
+      ? `<button type="button" class="add-slot-btn" onclick="addSlot('${ds}')">＋ 会場を追加（最大${MAX_SLOTS}）</button>`
+      : '';
+    return `
+      <div class="detail-row ${dayClassFor(ds)}" data-date="${ds}">
+        <div class="detail-date">${dateLabelWithHoliday(ds)}</div>
+        ${slotsHtml}
+        ${addBtn}
+        ${ORG.parentDuty ? `<label class="field-label" style="margin-top:8px;">保護者練習当番欄</label>
+        <input type="text" value="${detail.parentDuty ? escapeHtml(detail.parentDuty) : ''}" placeholder="当番の保護者名など" oninput="updateDateParentDuty('${ds}',this.value)">` : ''}
+      </div>
+    `;
+  }).join('');
+}
+function updateDateParentDuty(ds, value){
+  const detail = adminSelection.get(ds);
+  if(detail) detail.parentDuty = value;
+}
+
+function renderSlotEditor(ds, slot, idx, totalSlots){
+  if(!slot.schoolNotes) slot.schoolNotes = [];
+  const radios = LOCATIONS.map(loc => `
+    <div class="loc-radio ${slot.location === loc ? 'on' : ''}" data-loc="${loc}" onclick="selectSlotLocation(this,'${ds}',${idx},'${loc}')">${loc}</div>
+  `).join('');
+  const showCustom = slot.location === CUSTOM_LOC;
+  const catChips = CATEGORIES.map(cat => `
+    <div class="cat-chip ${slot.categories.includes(cat) ? 'on' : ''}" data-cat="${cat}" onclick="toggleSlotCategory(this,'${ds}',${idx},'${cat}')">${cat}</div>
+  `).join('');
+  const showCustomCat = slot.categories.includes('カスタム');
+  const coachChips = COACHES.map(coach => `
+    <div class="coach-chip ${slot.coaches.includes(coach) ? 'on' : ''}" data-coach="${coach}" onclick="toggleSlotCoach(this,'${ds}',${idx},'${coach}')">${coach}</div>
+  `).join('');
+  const showCustomCoach = slot.coaches.includes('カスタム');
+  const noteChips = SCHOOL_NOTES.map(note => `
+    <div class="school-note-chip ${slot.schoolNotes.includes(note) ? 'on' : ''}" onclick="toggleSlotSchoolNote(this,'${ds}',${idx},'${note}')">${note}</div>
+  `).join('');
+  const removeBtn = totalSlots > 1
+    ? `<button type="button" class="remove-slot-btn" onclick="removeSlot('${ds}',${idx})">この会場を削除</button>`
+    : '';
+  const catBlock = CATEGORIES.length ? `
+      <label class="field-label">対象区分（複数選択可）</label>
+      <div class="cat-chips">${catChips}</div>
+      <input type="text" class="cat-custom-input" style="display:${showCustomCat ? 'block' : 'none'};margin-bottom:8px;" value="${slot.customCategory ? escapeHtml(slot.customCategory) : ''}" placeholder="例）保護者対応" oninput="updateSlotDetail('${ds}',${idx},'customCategory',this.value)">` : '';
+  const coachBlock = COACHES.length ? `
+      <label class="field-label">責任者コーチ（複数選択可）</label>
+      <div class="coach-chips">${coachChips}</div>
+      <input type="text" class="coach-custom-input" style="display:${showCustomCoach ? 'block' : 'none'};margin-bottom:8px;" value="${slot.customCoach ? escapeHtml(slot.customCoach) : ''}" placeholder="コーチ名を入力" oninput="updateSlotDetail('${ds}',${idx},'customCoach',this.value)">` : '';
+  const noteBlock = SCHOOL_NOTES.length ? `
+      <label class="field-label" style="margin-top:8px;">学校備考欄（複数選択可）</label>
+      <div class="school-note-chips">${noteChips}</div>` : '';
+  return `
+    <div class="slot-card slot-color-${idx}" data-date="${ds}" data-slot-idx="${idx}">
+      <div class="slot-card-header">
+        ${totalSlots > 1 ? `<span class="slot-title">会場${idx + 1}</span>` : ''}
+        ${removeBtn}
+      </div>
+      <label class="field-label">会場</label>
+      <div class="loc-radios">${radios}</div>
+      <input type="text" class="loc-custom-input" style="display:${showCustom ? 'block' : 'none'};margin-bottom:8px;" value="${slot.customLocation ? escapeHtml(slot.customLocation) : ''}" placeholder="会場名を入力" oninput="updateSlotDetail('${ds}',${idx},'customLocation',this.value)">
+      <label class="field-label">時間</label>
+      <div class="time-range">
+        <input type="time" value="${slot.startTime || ''}" ${slot.allDay ? 'disabled' : ''} oninput="updateSlotDetail('${ds}',${idx},'startTime',this.value)">
+        <span class="tlabel">〜</span>
+        <input type="time" value="${slot.endTime || ''}" ${slot.allDay ? 'disabled' : ''} oninput="updateSlotDetail('${ds}',${idx},'endTime',this.value)">
+        <button type="button" class="allday-btn ${slot.allDay ? 'on' : ''}" onclick="toggleSlotAllDay(this,'${ds}',${idx})">終日</button>
+      </div>${catBlock}${coachBlock}
+      <label class="field-label">コメント</label>
+      <input type="text" value="${slot.message ? escapeHtml(slot.message) : ''}" placeholder="フリーメッセージ" oninput="updateSlotDetail('${ds}',${idx},'message',this.value)">${noteBlock}
+    </div>
+  `;
+}
+
+function defaultSecondSlot(){
+  const t = ORG.secondSlot;
+  return { location: t.location || '', customLocation: '', startTime: t.startTime || '', endTime: t.endTime || '', allDay: false, categories: [...(t.categories || [])], customCategory: '', coaches: [...(t.coaches || [])], customCoach: '', message: '', schoolNotes: [] };
+}
+function toggleSlotSchoolNote(el, ds, idx, note){
+  el.classList.toggle('on');
+  const slot = adminSelection.get(ds).slots[idx];
+  if(!slot) return;
+  const on = el.classList.contains('on');
+  if(!slot.schoolNotes) slot.schoolNotes = [];
+  if(on){ if(!slot.schoolNotes.includes(note)) slot.schoolNotes.push(note); }
+  else{ slot.schoolNotes = slot.schoolNotes.filter(n => n !== note); }
+}
+function schoolNoteBadges(slot){
+  if(!slot.schoolNotes || slot.schoolNotes.length === 0) return '';
+  return `<div class="school-note-line">${slot.schoolNotes.map(n => `<span class="school-note-badge">${escapeHtml(n)}</span>`).join('')}</div>`;
+}
+function addSlot(ds){
+  const detail = adminSelection.get(ds);
+  if(!detail || detail.slots.length >= MAX_SLOTS) return;
+  detail.slots.push(detail.slots.length === 1 ? defaultSecondSlot() : defaultSlot());
+  renderDateDetailList();
+}
+function removeSlot(ds, idx){
+  const detail = adminSelection.get(ds);
+  if(!detail) return;
+  detail.slots.splice(idx, 1);
+  renderDateDetailList();
+}
+function selectSlotLocation(el, ds, idx, loc){
+  const card = el.closest('.slot-card');
+  card.querySelectorAll('.loc-radio').forEach(r => r.classList.remove('on'));
+  el.classList.add('on');
+  const slot = adminSelection.get(ds).slots[idx];
+  if(slot) slot.location = loc;
+  const customInput = card.querySelector('.loc-custom-input');
+  if(customInput) customInput.style.display = (loc === CUSTOM_LOC) ? 'block' : 'none';
+}
+function toggleSlotAllDay(el, ds, idx){
+  const slot = adminSelection.get(ds).slots[idx];
+  if(!slot) return;
+  slot.allDay = !slot.allDay;
+  renderDateDetailList();
+}
+function toggleSlotCategory(el, ds, idx, cat){
+  el.classList.toggle('on');
+  const slot = adminSelection.get(ds).slots[idx];
+  if(!slot) return;
+  const on = el.classList.contains('on');
+  if(on){ if(!slot.categories.includes(cat)) slot.categories.push(cat); }
+  else{ slot.categories = slot.categories.filter(c => c !== cat); }
+  if(cat === 'カスタム'){
+    const card = el.closest('.slot-card');
+    const customInput = card.querySelector('.cat-custom-input');
+    if(customInput) customInput.style.display = on ? 'block' : 'none';
+  }
+}
+function toggleSlotCoach(el, ds, idx, coach){
+  el.classList.toggle('on');
+  const slot = adminSelection.get(ds).slots[idx];
+  if(!slot) return;
+  const on = el.classList.contains('on');
+  if(on){ if(!slot.coaches.includes(coach)) slot.coaches.push(coach); }
+  else{ slot.coaches = slot.coaches.filter(c => c !== coach); }
+  if(coach === 'カスタム'){
+    const card = el.closest('.slot-card');
+    const customInput = card.querySelector('.coach-custom-input');
+    if(customInput) customInput.style.display = on ? 'block' : 'none';
+  }
+}
+function updateSlotDetail(ds, idx, field, value){
+  const slot = adminSelection.get(ds).slots[idx];
+  if(slot) slot[field] = value;
+}
+
+async function savePracticeDates(){
+  const ym = document.getElementById('monthInput').value;
+  const arr = Array.from(adminSelection.entries())
+    .map(([date, d]) => ({
+      date,
+      parentDuty: d.parentDuty || '',
+      slots: d.slots.map(s => ({
+        location: s.location || '', customLocation: s.customLocation || '',
+        startTime: s.startTime || '', endTime: s.endTime || '', allDay: !!s.allDay,
+        categories: s.categories || [], customCategory: s.customCategory || '', coaches: s.coaches || [], customCoach: s.customCoach || '',
+        message: s.message || '', schoolNotes: s.schoolNotes || []
+      }))
+    }))
+    .sort((a,b) => a.date.localeCompare(b.date));
+  if(arr.length === 0){
+    alert('練習日が1つも選ばれていません。カレンダーの日付をタップしてから保存してください。');
+    return;
+  }
+  try{
+    const result = await apiPost({ action: 'savePracticeDates', month: ym, dates: arr });
+    if(!result || !result.ok){
+      alert('保存に失敗しました。もう一度お試しください。');
+      return;
+    }
+    practiceDates = arr;
+    document.getElementById('adminPanel').style.display = 'none';
+    renderChildren();
+    loadSummary();
+    alert(`${arr.length}件の練習日を保存しました。`);
+  }catch(e){
+    console.error(e);
+    alert('保存に失敗しました。通信エラーの可能性があります。(' + (e.message || e) + ')');
+  }
+}
+
+async function clearAllPracticeDates(){
+  const ym = document.getElementById('monthInput').value;
+  if(!confirm(`${ym}の練習日をすべて削除します。よろしいですか？（元に戻せません）`)) return;
+  adminSelection.clear();
+  renderCalGrid();
+  renderDateDetailList();
+  try{
+    const result = await apiPost({ action: 'savePracticeDates', month: ym, dates: [] });
+    if(!result || !result.ok){
+      alert('削除に失敗しました。もう一度お試しください。');
+      return;
+    }
+    practiceDates = [];
+    renderChildren();
+    loadSummary();
+    alert('この月の練習日をすべて削除しました。');
+  }catch(e){
+    console.error(e);
+    alert('削除に失敗しました。通信エラーの可能性があります。(' + (e.message || e) + ')');
+  }
+}
+
+function normalizeSlot(s){
+  return {
+    location: s.location || '', customLocation: s.customLocation || '',
+    startTime: s.startTime || (s.time || ''), endTime: s.endTime || '',
+    allDay: !!s.allDay,
+    categories: Array.isArray(s.categories) ? s.categories : [],
+    customCategory: s.customCategory || '',
+    coaches: Array.isArray(s.coaches) ? s.coaches : [],
+    customCoach: s.customCoach || '',
+    message: s.message || '',
+    schoolNotes: Array.isArray(s.schoolNotes) ? s.schoolNotes : []
+  };
+}
+function normalizePracticeDates(raw){
+  return (raw || []).map(item => {
+    if(typeof item === 'string') return { date: item, parentDuty: '', slots: [defaultSlot()] };
+    if(Array.isArray(item.slots)) return { date: item.date, parentDuty: item.parentDuty || '', slots: item.slots.map(normalizeSlot) };
+    // legacy flat structure (no slots array) -> wrap as a single slot
+    return { date: item.date, parentDuty: item.parentDuty || '', slots: [normalizeSlot(item)] };
+  });
+}
+
+let loadSeq = 0;
+async function loadPracticeDates(){
+  const ym = document.getElementById('monthInput').value;
+  const my = ++loadSeq;
+  let dates = [];
+  try{
+    const r = await apiGet('getPracticeDates', { month: ym });
+    dates = normalizePracticeDates(r.dates);
+  }catch(e){
+    console.error(e);
+    dates = [];
+  }
+  if(my !== loadSeq) return;
+  practiceDates = dates;
+  if(dates.length > 0){
+    await ensureHolidaysLoaded(dates.map(pd => pd.date));
+  }
+  await liffReadyPromise; // LINEの表示名が分かってから子どもの欄を作る
+  if(my !== loadSeq) return;
+  renderChildren();
+  loadSummary();
+  loadMonthSummaryDisplay();
+}
+
+function addChild(prefillName){
+  childCounter++;
+  const id = `child_${childCounter}`;
+  const container = document.getElementById('childrenContainer');
+  const block = document.createElement('div');
+  block.className = 'card child-block';
+  block.id = id;
+  block.innerHTML = `
+    <div class="row-between">
+      <div class="field" style="margin:0;flex:1;">
+        <label class="field-label">お子様・コーチのお名前</label>
+        <input type="text" class="childName" placeholder="例）佐藤 太郎" value="${prefillName || ''}">
+      </div>
+      <button class="remove-child" onclick="removeChild('${id}')" style="margin-left:8px;">削除</button>
+    </div>
+    <div class="loadNote" style="font-size:11.5px;color:var(--muted);margin:-4px 0 6px;"></div>
+    <div class="datesList"></div>
+    <button type="button" class="clear-child-btn" onclick="clearChildAttendance('${id}')">この月の回答をクリア</button>
+  `;
+  container.appendChild(block);
+  renderDatesForChild(block);
+  block.querySelector('.childName').addEventListener('blur', () => loadAndApplyExisting(block));
+  if(prefillName) loadAndApplyExisting(block);
+}
+
+async function clearChildAttendance(id){
+  const block = document.getElementById(id);
+  if(!block) return;
+  const nameEl = block.querySelector('.childName');
+  const name = nameEl ? nameEl.value.trim() : '';
+  if(!name){
+    alert('お名前が入力されていません。');
+    return;
+  }
+  const ym = document.getElementById('monthInput').value;
+  if(!confirm(`${name}さんの${ym}分の回答のうち、今日以降の分を削除します（過去の日付の回答は全体状況・CSVに残ります）。よろしいですか？`)) return;
+  try{
+    const result = await apiPost({ action: 'clearAttendance', month: ym, name });
+    if(!result || !result.ok){
+      alert('削除に失敗しました。もう一度お試しください。');
+      return;
+    }
+    renderDatesForChild(block); // rebuild with all chips cleared
+    alert('今日以降の回答を削除しました。');
+    invalidateAttendanceListCache();
+    loadSummary();
+  }catch(e){
+    console.error(e);
+    alert('削除に失敗しました。通信エラーの可能性があります。(' + (e.message || e) + ')');
+  }
+}
+
+async function loadAndApplyExisting(block){
+  const nameEl = block.querySelector('.childName');
+  const name = nameEl ? nameEl.value.trim() : '';
+  const note = block.querySelector('.loadNote');
+  if(!name) return;
+  const ym = document.getElementById('monthInput').value;
+  try{
+    const r = await getAttendanceListShared(ym);
+    const submissions = r.submissions || [];
+    const existing = submissions.find(s => s.name === name);
+    if(!existing || !existing.days){
+      if(note) note.textContent = '';
+      return;
+    }
+    block.querySelectorAll('.date-row').forEach(row => {
+      const ds = row.dataset.date;
+      const dayData = existing.days[ds];
+      if(!dayData) return;
+      row.querySelectorAll('.slot-attend-block').forEach(sb => {
+        const idx = sb.dataset.slotIdx;
+        const d = dayData['slot' + idx];
+        if(!d || !d.status) return;
+        const chip = sb.querySelector(`.chip[data-type="${d.status}"]`);
+        if(chip && !chip.classList.contains('on')) selectChip(chip);
+        if(d.status === 'late' && d.time){ const t = sb.querySelector('.lateTime'); if(t) t.value = d.time; }
+        if(d.status === 'early' && d.time){ const t = sb.querySelector('.earlyTime'); if(t) t.value = d.time; }
+        if(d.status === 'other' && d.message){ const m = sb.querySelector('.otherMessage'); if(m) m.value = d.message; }
+      });
+    });
+    if(note) note.textContent = '前回の回答を読み込みました。変更したい日だけ直して送信してください。';
+  }catch(e){
+    console.error(e);
+  }
+}
+function removeChild(id){
+  const el = document.getElementById(id);
+  if(el) el.remove();
+}
+function renderChildren(){
+  document.querySelectorAll('.child-block').forEach(block => {
+    renderDatesForChild(block);
+    loadAndApplyExisting(block);
+  });
+  if(document.getElementById('childrenContainer').children.length === 0){
+    loadAllChildrenForSubmitter();
+  }
+}
+
+function rememberChildNames(){
+  try{
+    const names = Array.from(document.querySelectorAll('.childName')).map(i => i.value.trim()).filter(Boolean);
+    if(names.length) localStorage.setItem('attendanceChildNames', JSON.stringify(names));
+  }catch(e){}
+}
+async function loadAllChildrenForSubmitter(){
+  const ym = document.getElementById('monthInput').value;
+  let names = [];
+  if(lineDisplayName){
+    try{
+      const r = await getAttendanceListShared(ym);
+      const submissions = r.submissions || [];
+      const mine = submissions.filter(s => s.submitterLineName === lineDisplayName);
+      // unique names, most recently updated first
+      const seen = new Set();
+      mine.sort((a,b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+      mine.forEach(s => { if(s.name && !seen.has(s.name)){ seen.add(s.name); names.push(s.name); } });
+    }catch(e){ console.error(e); }
+  }
+  if(names.length === 0){
+    // 他の団体で入力したお子様の名前を引き継ぐ（兄弟が別団体にいる場合）
+    try{
+      const saved = JSON.parse(localStorage.getItem('attendanceChildNames') || '[]');
+      if(Array.isArray(saved)) names = saved.filter(n => typeof n === 'string' && n);
+    }catch(e){}
+  }
+  if(document.getElementById('childrenContainer').children.length > 0) return; // 通信中に別の処理で作られていたら何もしない
+  if(names.length === 0){
+    addChild(lineDisplayName || '');
+  }else{
+    names.forEach(n => addChild(n));
+  }
+}
+function locationBadge(slot){
+  if(!slot || !slot.location) return '';
+  const label = (slot.location === CUSTOM_LOC && slot.customLocation) ? slot.customLocation : slot.location;
+  return `<span class="loc-badge" data-loc="${escapeHtml(slot.location)}">${escapeHtml(label)}</span>`;
+}
+function categoryBadges(slot){
+  if(!slot.categories || slot.categories.length === 0) return '';
+  const badges = slot.categories.map(c => {
+    const label = (c === 'カスタム' && slot.customCategory) ? slot.customCategory : c;
+    return `<span class="cat-badge" data-cat="${escapeHtml(c)}">${escapeHtml(label)}</span>`;
+  }).join('');
+  const openNote = slot.categories.includes('オープン') ? '<div class="open-note">BC鶴岡・鶴六どちらの所属でも、区分を問わず参加できます。小4以下は保護者の付き添いが条件です。</div>' : '';
+  return `<div class="cat-line">${badges}</div>${openNote}`;
+}
+function coachLine(slot){
+  if(!slot.coaches || slot.coaches.length === 0) return '';
+  const badges = slot.coaches.map(c => {
+    const label = (c === 'カスタム' && slot.customCoach) ? slot.customCoach : c;
+    return `<span class="coach-badge" data-coach="${escapeHtml(c)}">${escapeHtml(label)}</span>`;
+  }).join('');
+  return `<div class="coach-line">責任者: ${badges}</div>`;
+}
+function formatTimeRange(slot){
+  if(slot.allDay) return '終日';
+  if(slot.startTime && slot.endTime) return `${slot.startTime}〜${slot.endTime}`;
+  if(slot.startTime) return `${slot.startTime}〜`;
+  if(slot.endTime) return `〜${slot.endTime}`;
+  return '';
+}
+
+function renderSlotAttendBlock(slot, idx, totalSlots){
+  const timeRange = formatTimeRange(slot);
+  const metaLine = (slot.location || timeRange) ? `<div class="date-meta">${locationBadge(slot)}${timeRange ? escapeHtml(timeRange) : ''}</div>` : '';
+  const catLine = categoryBadges(slot);
+  const coachLn = coachLine(slot);
+  const msgLine = slot.message ? `<div class="date-note">🏸 ${escapeHtml(slot.message)}</div>` : '';
+  const slotLabel = totalSlots > 1 ? `<div class="slot-title">会場${idx + 1}</div>` : '';
+  return `
+    <div class="slot-attend-block slot-color-${idx}" data-slot-idx="${idx}" data-start="${slot.startTime || ''}" data-end="${slot.endTime || ''}">
+      ${slotLabel}
+      ${metaLine}${catLine}${coachLn}${schoolNoteBadges(slot)}${msgLine}
+      <div class="chips">
+        <div class="chip" data-type="attend" onclick="selectChip(this)">✓ 参加</div>
+        <div class="chip" data-type="absent" onclick="selectChip(this)">✕ 欠席</div>
+        <div class="chip" data-type="late" onclick="selectChip(this)">⏰ 遅刻</div>
+        <div class="chip" data-type="early" onclick="selectChip(this)">↩ 早退</div>
+        <div class="chip" data-type="other" onclick="selectChip(this)">💬 フリーメッセージ</div>
+      </div>
+      <div class="time-inline" data-type="late">
+        <span class="tlabel">到着予定</span><input type="time" class="lateTime">
+      </div>
+      <div class="time-inline" data-type="early">
+        <span class="tlabel">退出予定</span><input type="time" class="earlyTime">
+      </div>
+      <div class="other-inline" data-type="other">
+        <input type="text" class="otherMessage" placeholder="フリーメッセージ">
+      </div>
+    </div>
+  `;
+}
+
+function renderDatesForChild(block){
+  const list = block.querySelector('.datesList');
+  const todayStr = getTodayStr();
+  const upcomingDates = practiceDates.filter(pd => pd.date >= todayStr);
+  if(practiceDates.length === 0){
+    list.innerHTML = `<div class="empty">この月の練習日がまだ設定されていません</div>`;
+    return;
+  }
+  if(upcomingDates.length === 0){
+    list.innerHTML = `<div class="empty">今月の残りの練習日はありません</div>`;
+    return;
+  }
+  const nextDate = computeNextPracticeDate(practiceDates.map(pd => pd.date));
+  list.innerHTML = upcomingDates.map(pd => {
+    const ds = pd.date;
+    const slotsHtml = pd.slots.map((slot, idx) => renderSlotAttendBlock(slot, idx, pd.slots.length)).join('');
+    const dutyLine = pd.parentDuty ? `<div class="duty-line">👪 当番: ${escapeHtml(pd.parentDuty)}</div>` : '';
+    return `
+    <div class="date-row ${dayClassFor(ds)}" data-date="${ds}">
+      <div class="date-label">${dateLabelWithHoliday(ds)}${dateBadgeFor(ds, todayStr, nextDate)}</div>
+      ${slotsHtml}
+      ${dutyLine}
+    </div>
+  `;
+  }).join('');
+}
+function addMinutesToTime(timeStr, deltaMinutes){
+  if(!timeStr) return '';
+  const [h, m] = timeStr.split(':').map(Number);
+  let total = h * 60 + m + deltaMinutes;
+  total = ((total % 1440) + 1440) % 1440;
+  const nh = Math.floor(total / 60);
+  const nm = total % 60;
+  return `${String(nh).padStart(2,'0')}:${String(nm).padStart(2,'0')}`;
+}
+
+function selectChip(el){
+  const scope = el.closest('.slot-attend-block');
+  const type = el.dataset.type;
+  const wasOn = el.classList.contains('on');
+
+  // clear all chips in this slot block, then set only the clicked one (toggle off if tapped again)
+  scope.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+  scope.querySelectorAll('.time-inline').forEach(t => t.classList.remove('show'));
+  scope.querySelectorAll('.other-inline').forEach(t => t.classList.remove('show'));
+
+  if(!wasOn){
+    el.classList.add('on');
+    if(type === 'late' || type === 'early'){
+      scope.querySelector(`.time-inline[data-type="${type}"]`).classList.add('show');
+      if(type === 'late'){
+        const input = scope.querySelector('.lateTime');
+        if(input && !input.value && scope.dataset.start){
+          input.value = addMinutesToTime(scope.dataset.start, 30);
+        }
+      }
+      if(type === 'early'){
+        const input = scope.querySelector('.earlyTime');
+        if(input && !input.value && scope.dataset.end){
+          input.value = addMinutesToTime(scope.dataset.end, -60);
+        }
+      }
+    }
+    if(type === 'other'){
+      scope.querySelector(`.other-inline[data-type="other"]`).classList.add('show');
+    }
+  }
+}
+
+async function submitAll(){
+  const ym = document.getElementById('monthInput').value;
+  const msg = document.getElementById('statusMsg');
+  const blocks = document.querySelectorAll('.child-block');
+  if(blocks.length === 0){ msg.textContent = 'お子様を追加してください'; return; }
+
+  msg.textContent = '送信中…';
+  let ok = true;
+  let errorDetail = '';
+  let sentCount = 0;
+  let skippedNoName = 0;
+
+  try{
+    for(const block of blocks){
+      const nameEl = block.querySelector('.childName');
+      const name = nameEl ? nameEl.value.trim() : '';
+      if(!name){ skippedNoName++; continue; }
+      const days = {};
+      block.querySelectorAll('.date-row').forEach(row => {
+        const ds = row.dataset.date;
+        const dayData = {};
+        row.querySelectorAll('.slot-attend-block').forEach(sb => {
+          const idx = sb.dataset.slotIdx;
+          const activeChip = sb.querySelector('.chip.on');
+          if(!activeChip) return;
+          const status = activeChip.dataset.type; // attend | absent | late | early | other
+          const entry = { status };
+          if(status === 'late'){
+            const t = sb.querySelector('.lateTime');
+            entry.time = t ? t.value : null;
+          }
+          if(status === 'early'){
+            const t = sb.querySelector('.earlyTime');
+            entry.time = t ? t.value : null;
+          }
+          if(status === 'other'){
+            const m = sb.querySelector('.otherMessage');
+            entry.message = m ? m.value.trim() : '';
+          }
+          dayData['slot' + idx] = entry;
+        });
+        if(Object.keys(dayData).length > 0) days[ds] = dayData;
+      });
+      try{
+        const result = await apiPost({
+          action: 'saveAttendance', month: ym, name,
+          submitterLineName: lineDisplayName || null, days
+        });
+        if(!result || !result.ok){ ok = false; } else { sentCount++; }
+      }catch(e){ console.error(e); ok = false; errorDetail = e.message || String(e); }
+    }
+  }catch(e){
+    console.error(e);
+    ok = false;
+    errorDetail = e.message || String(e);
+  }
+
+  if(sentCount === 0 && skippedNoName > 0){
+    msg.textContent = 'お名前が入力されていないため送信されていません。「お子様・コーチのお名前」欄を確認してください。';
+    return;
+  }
+
+  msg.textContent = ok
+    ? 'この月の出欠を送信しました。ありがとうございます！'
+    : `送信に失敗しました。${errorDetail ? '(' + errorDetail + ')' : 'もう一度お試しください。'}`;
+  if(ok) rememberChildNames();
+  invalidateAttendanceListCache();
+  loadSummary();
+}
+
+async function loadSummary(){
+  const ym = document.getElementById('monthInput').value;
+  const container = document.getElementById('summaryContainer');
+  if(practiceDates.length === 0){
+    container.innerHTML = '<div class="empty">練習日が設定されていません</div>';
+    return;
+  }
+  try{
+    const r = await getAttendanceListShared(ym);
+    const submissions = r.submissions || [];
+    const others = await getOtherOrgsShared(ym).catch(e => { console.error(e); return []; });
+    const anyOther = others.some(o => o.submissions.length > 0);
+    if(submissions.length === 0 && !anyOther){
+      container.innerHTML = '<div class="empty">まだ回答がありません</div>';
+      return;
+    }
+    let html = `<div class="answered-count">回答済み：${submissions.length}名</div>`;
+    const labelMap = { attend: '✓ 出席', absent: '✕ 欠席', late: '⏰ 遅刻', early: '↩ 早退', other: '💬 フリーメッセージ' };
+    const statusOrder = ['attend', 'absent', 'late', 'early', 'other'];
+    const todayStr = getTodayStr();
+    const nextDate = computeNextPracticeDate(practiceDates.map(pd => pd.date));
+    for(const pd of practiceDates){
+      const ds = pd.date;
+      const slotBlocksHtml = pd.slots.map((slot, idx) => {
+        const groups = { attend: [], absent: [], late: [], early: [], other: [] };
+        // 同じ日・同じ会場で練習する他団体の枠（あれば合同で表示する）
+        const matches = [];
+        for(const oo of others){
+          const opd = oo.practiceDates.find(p => p.date === ds);
+          if(!opd) continue;
+          opd.slots.forEach((os, oidx) => {
+            if(sameVenue(slot, ORG.customLoc, os, ORGS[oo.id].customLoc)) matches.push({ org: ORGS[oo.id], slot: os, idx: oidx, submissions: oo.submissions });
+          });
+        }
+        const tagHtml = (o) => `<span class="org-tag" style="background:${o.theme.navy}">${escapeHtml(o.tab)}</span>`;
+        // 同じ名前・同じ出欠は1行にまとめ、団体バッジを並べる（重複所属対応）
+        const seen = {};
+        const collect = (subs, slotIdx, org) => {
+          for(const s of subs){
+            const dayData = s.days ? s.days[ds] : null;
+            const d = dayData ? dayData['slot' + slotIdx] : null;
+            if(!d || !d.status || !groups[d.status]) continue;
+            let suffix = '';
+            if(d.status === 'late' || d.status === 'early') suffix = d.time ? `(${d.time})` : '';
+            if(d.status === 'other') suffix = d.message ? `:${escapeHtml(d.message)}` : '';
+            const key = d.status + '|' + s.name + '|' + suffix;
+            const render = (tags) => (matches.length ? tags.map(tagHtml).join('') : '') + escapeHtml(s.name) + suffix;
+            if(seen[key]){
+              if(!seen[key].tags.includes(org)){
+                seen[key].tags.push(org);
+                groups[d.status][seen[key].i] = render(seen[key].tags);
+              }
+            } else {
+              seen[key] = { tags: [org], i: groups[d.status].length };
+              groups[d.status].push(render([org]));
+            }
+          }
+        };
+        collect(submissions, idx, ORG);
+        matches.forEach(m => collect(m.submissions, m.idx, m.org));
+        const mergedNote = matches.length
+          ? `<div class="merged-note">合同表示：${[{ org: ORG, slot }, ...matches].map(m => `${escapeHtml(m.org.tab)} ${escapeHtml(formatTimeRange(m.slot))}`).join(' / ')}</div>`
+          : '';
+        const totalCount = statusOrder.reduce((sum, k) => sum + groups[k].length, 0);
+        if(totalCount === 0) return '';
+        const timeRange = formatTimeRange(slot);
+        const metaLine = (slot.location || timeRange) ? `<div class="date-meta">${locationBadge(slot)}${timeRange ? escapeHtml(timeRange) : ''}</div>` : '';
+        const catLine = categoryBadges(slot);
+        const coachLn = coachLine(slot);
+              const msgLine = slot.message ? `<div class="date-note">🏸 ${escapeHtml(slot.message)}</div>` : '';
+        const slotLabel = pd.slots.length > 1 ? `<div class="slot-title">会場${idx + 1}</div>` : '';
+        const groupsHtml = statusOrder
+          .filter(k => groups[k].length > 0)
+          .map(k => `
+            <div class="status-group">
+              <span class="group-label ${k}">${labelMap[k]}（${groups[k].length}）</span>
+              <div class="group-names">${groups[k].map(n => `<div class="name-item">${n}</div>`).join('')}</div>
+            </div>
+          `).join('');
+        return `<div class="slot-color-${idx}">${slotLabel}${metaLine}${mergedNote}${catLine}${coachLn}${schoolNoteBadges(slot)}${msgLine}${groupsHtml}</div>`;
+      }).join('');
+      if(!slotBlocksHtml.trim()) continue;
+      const dutyLine = pd.parentDuty ? `<div class="duty-line">👪 当番: ${escapeHtml(pd.parentDuty)}</div>` : '';
+      html += `<div class="summary-date ${dayClassFor(ds)}"><div class="d-title">${dateLabelWithHoliday(ds)}${dateBadgeFor(ds, todayStr, nextDate)}</div>${slotBlocksHtml}${dutyLine}</div>`;
+    }
+    container.innerHTML = html || '<div class="empty">まだ回答がありません</div>';
+  }catch(e){
+    console.error(e);
+    container.innerHTML = '<div class="empty">読み込みに失敗しました</div>';
+  }
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+const LOC_COLORS_PNG = {'六コミ':'#2563EB','武道館':'#7C3AED','宝田':'#0D9488','櫛スポ':'#EA580C','羽黒体':'#16A34A','藤島体':'#DB2777','アリーナ':'#4F46E5','多目的':'#B45309','カスタム':'#57534E','その他':'#57534E'};
+const CAT_COLORS_PNG = {'オープン':'#DB2777','1班':'#2563EB','2班':'#7C3AED','3班':'#0D9488','全員':'#16A34A','選抜':'#EA580C','カスタム':'#57534E','部活動':'#2563EB','区分A':'#7C3AED','区分B':'#0D9488','小学生':'#EA580C'};
+
+function roundRectPath(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+
+async function exportCalendarPNG(){
+  const btn = document.querySelector('.export-png-btn');
+  const originalLabel = btn ? btn.textContent : '';
+  if(btn){ btn.textContent = '作成中…'; btn.disabled = true; }
+  try{
+    const ym = document.getElementById('monthInput').value;
+    const [yearStr, monthStr] = ym.split('-');
+    const year = parseInt(yearStr), month = parseInt(monthStr);
+    const total = daysInMonth(ym);
+    const offset = firstWeekday(ym);
+
+    let currentSummary = '', nextSummary = '';
+    await Promise.all([
+      ensureHolidaysLoaded(Array.from({length: total}, (_, i) => dateStr(ym, i+1))),
+      apiGet('getMonthSummary', { month: ym }).then(r => {
+        currentSummary = r.currentSummary || '';
+        nextSummary = r.nextSummary || '';
+      }).catch(e => console.error(e))
+    ]);
+
+    const practiceByDate = {};
+    practiceDates.forEach(pd => { practiceByDate[pd.date] = pd; });
+
+    const CELL_W = 260, CELL_H = 310;
+    const GRID_LEFT = 20;
+    const TITLE_H = 100;
+    const noteBoxH = (text) => {
+      const lineCount = Math.max(1, text.split('\n').filter(l=>l.trim()).length);
+      return 46 + lineCount*26 + 10;
+    };
+    let TOP_NOTES_H = 0;
+    if(currentSummary.trim() || nextSummary.trim()){
+      const curH = currentSummary.trim() ? noteBoxH(currentSummary) : 0;
+      const nxtH = nextSummary.trim() ? noteBoxH(nextSummary) : 0;
+      TOP_NOTES_H = Math.max(curH, nxtH) + 20;
+    }
+    const BOTTOM_NOTES_H = 0;
+    const DOW_H = 60;
+    const rows = Math.ceil((offset + total) / 7);
+    const GRID_TOP = 20 + TITLE_H + TOP_NOTES_H + DOW_H + 20;
+    const W = GRID_LEFT*2 + CELL_W*7;
+    const H = GRID_TOP + CELL_H*rows + BOTTOM_NOTES_H + 24;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    ctx.textBaseline = 'top';
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0,0,W,H);
+    ctx.strokeStyle = '#2E8B47';
+    ctx.lineWidth = 9;
+    ctx.strokeRect(5,5,W-10,H-10);
+
+    ctx.fillStyle = '#2E8B47';
+    ctx.fillRect(20,20,W-40,TITLE_H);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 48px "Noto Sans CJK JP", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${year}年${month}月　${ORG.pngTitle}`, W/2, 20+TITLE_H/2+2);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+
+    const drawNoteBox = (x, y, boxW, title, text) => {
+      const lineCount = Math.max(1, text.split('\n').filter(l=>l.trim()).length);
+      const boxH = 46 + lineCount*26 + 10;
+      ctx.fillStyle = '#FFF3E0';
+      ctx.fillRect(x, y, boxW, boxH);
+      ctx.strokeStyle = '#E8871E';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x, y, boxW, boxH);
+      ctx.fillStyle = '#E8871E';
+      ctx.fillRect(x, y, 7, boxH);
+      ctx.font = 'bold 24px "Noto Sans CJK JP", sans-serif';
+      ctx.fillText('📌 '+title, x+20, y+10);
+      ctx.fillStyle = '#333';
+      ctx.font = '19px "Noto Sans CJK JP", sans-serif';
+      let ty = y+46;
+      text.split('\n').map(l=>l.trim()).filter(Boolean).forEach(line => {
+        ctx.fillText('・'+line.replace(/^[・\-*]\s*/,''), x+20, ty);
+        ty += 26;
+      });
+      return boxH;
+    };
+
+    if(currentSummary.trim() || nextSummary.trim()){
+      const notesY = 20+TITLE_H+10;
+      if(currentSummary.trim() && nextSummary.trim()){
+        const halfW = (W-40-12)/2;
+        drawNoteBox(20, notesY, halfW, '今月のお知らせ', currentSummary);
+        drawNoteBox(20+halfW+12, notesY, halfW, '来月のお知らせ', nextSummary);
+      }else if(currentSummary.trim()){
+        drawNoteBox(20, notesY, W-40, '今月のお知らせ', currentSummary);
+      }else{
+        drawNoteBox(20, notesY, W-40, '来月のお知らせ', nextSummary);
+      }
+    }
+
+    const DOWN = ['日','月','火','水','木','金','土'];
+    for(let i=0;i<7;i++){
+      const x0 = GRID_LEFT + i*CELL_W;
+      const y0 = GRID_TOP - DOW_H;
+      ctx.fillStyle = '#E8871E';
+      ctx.fillRect(x0, y0, CELL_W, DOW_H);
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x0,y0,CELL_W,DOW_H);
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 26px "Noto Sans CJK JP", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(DOWN[i], x0+CELL_W/2, y0+16);
+      ctx.textAlign = 'left';
+    }
+
+    const badgePositions = {};
+    for(let d=1; d<=total; d++){
+      const ds = dateStr(ym, d);
+      const cellIndex = offset + d - 1;
+      const row = Math.floor(cellIndex/7);
+      const col = cellIndex%7;
+      const x0 = GRID_LEFT + col*CELL_W;
+      const y0 = GRID_TOP + row*CELL_H;
+      const pd = practiceByDate[ds];
+      const holidayName = holidayNameFor(ds);
+      const isSun = col === 0, isSat = col === 6;
+
+      ctx.fillStyle = pd ? '#FFF3A0' : '#ffffff';
+      ctx.fillRect(x0,y0,CELL_W,CELL_H);
+      ctx.strokeStyle = '#B7D9B0';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(x0,y0,CELL_W,CELL_H);
+
+      ctx.font = 'bold 30px "Noto Sans CJK JP", sans-serif';
+      ctx.fillStyle = (holidayName || isSun) ? '#D0392B' : (isSat ? '#1F5C99' : '#333');
+      ctx.fillText(String(d), x0+12, y0+10);
+      if(holidayName){
+        ctx.font = '14px "Noto Sans CJK JP", sans-serif';
+        ctx.fillStyle = '#D0392B';
+        ctx.fillText(holidayName, x0+48, y0+18);
+      }
+
+      if(pd && pd.slots && pd.slots.length){
+        const single = pd.slots.length === 1;
+        const F_LOC = single ? 'bold 30px' : 'bold 19px';
+        const F_TIME = single ? '28px' : '19px';
+        const F_CAT = single ? '21px' : '15px';
+        const F_COACH = single ? '24px' : '16px';
+        const LOC_PAD_H = single ? 44 : 28;
+        const LOC_GAP = single ? 54 : 34;
+        const TIME_GAP = single ? 42 : 26;
+        const CAT_GAP = single ? 42 : 26;
+        const slotH = (CELL_H-50) / pd.slots.length;
+        pd.slots.forEach((slot, idx) => {
+          const sy = y0+46+idx*slotH;
+          let ty = sy;
+          const locColor = LOC_COLORS_PNG[slot.location] || '#888';
+          ctx.fillStyle = locColor;
+          ctx.fillRect(x0+3, sy, 7, slotH-6);
+
+          if(slot.location){
+            const label = (slot.location === CUSTOM_LOC && slot.customLocation) ? slot.customLocation : slot.location;
+            ctx.font = `${F_LOC} "Noto Sans CJK JP", sans-serif`;
+            const tw = ctx.measureText(label).width;
+            const locBadgeW = tw+22;
+            ctx.fillStyle = locColor;
+            roundRectPath(ctx, x0+18, ty, locBadgeW, LOC_PAD_H, 13);
+            ctx.fill();
+            ctx.fillStyle = '#fff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(label, x0+18+locBadgeW/2, ty+LOC_PAD_H/2+1);
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+            badgePositions[ds] = badgePositions[ds] || [];
+            badgePositions[ds].push({
+              row, col, location: slot.location, customLocation: slot.customLocation || '',
+              categories: slot.categories || [], customCategory: slot.customCategory || '',
+              leftX: x0+18, rightX: x0+18+locBadgeW, midY: ty+LOC_PAD_H/2
+            });
+            ty += LOC_GAP;
+          }
+          const timeRange = formatTimeRange(slot);
+          if(timeRange){
+            ctx.font = `${F_TIME} "Noto Sans CJK JP", sans-serif`;
+            ctx.fillStyle = '#333';
+            ctx.fillText(timeRange, x0+20, ty);
+            ty += TIME_GAP;
+          }
+          if(slot.categories && slot.categories.length){
+            let cx = x0+18;
+            slot.categories.forEach(cat => {
+              const label = (cat === 'カスタム' && slot.customCategory) ? slot.customCategory : cat;
+              const color = CAT_COLORS_PNG[cat] || '#888';
+              ctx.font = `${F_CAT} "Noto Sans CJK JP", sans-serif`;
+              const tw = ctx.measureText(label).width;
+              const catBadgeW = tw+14;
+              const catBadgeH = single ? 32 : 21;
+              ctx.fillStyle = color;
+              roundRectPath(ctx, cx, ty, catBadgeW, catBadgeH, 10);
+              ctx.fill();
+              ctx.fillStyle = '#fff';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText(label, cx+catBadgeW/2, ty+catBadgeH/2+1);
+              ctx.textAlign = 'left';
+              ctx.textBaseline = 'top';
+              cx += tw+18;
+            });
+            ty += CAT_GAP;
+          }
+          if(slot.coaches && slot.coaches.length){
+            const coachLabels = slot.coaches.map(c => (c === 'カスタム' && slot.customCoach) ? slot.customCoach : c);
+            ctx.font = `${F_COACH} "Noto Sans CJK JP", sans-serif`;
+            ctx.fillStyle = '#333';
+            ctx.fillText('責任者:'+coachLabels.join('・'), x0+20, ty);
+            ty += TIME_GAP;
+          }
+          if(slot.message){
+            ctx.font = `${F_COACH} "Noto Sans CJK JP", sans-serif`;
+            ctx.fillStyle = '#57534E';
+            ctx.fillText('🏸 '+slot.message, x0+20, ty);
+          }
+        });
+      }
+      if(pd && pd.parentDuty){
+        ctx.font = '15px "Noto Sans CJK JP", sans-serif';
+        ctx.fillStyle = '#8B5A3C';
+        ctx.fillText('👪 '+pd.parentDuty, x0+14, y0+CELL_H-26);
+      }
+    }
+
+    // Draw connecting arrows between consecutive days with the same venue+categories
+    const sameCatSet = (a, b) => {
+      const sa = new Set(a||[]), sb = new Set(b||[]);
+      if(sa.size !== sb.size) return false;
+      for(const x of sa) if(!sb.has(x)) return false;
+      return true;
+    };
+    for(let d=2; d<=total; d++){
+      const ds = dateStr(ym, d);
+      const dp = new Date(ds + 'T00:00:00');
+      dp.setDate(dp.getDate() - 1);
+      const prevDs = `${dp.getFullYear()}-${String(dp.getMonth()+1).padStart(2,'0')}-${String(dp.getDate()).padStart(2,'0')}`;
+      const todayBadges = badgePositions[ds] || [];
+      const prevBadges = badgePositions[prevDs] || [];
+      todayBadges.forEach(tb => {
+        const sameLocation = (pb, tb) => {
+          if(pb.location !== tb.location) return false;
+          if(pb.location === CUSTOM_LOC) return pb.customLocation === tb.customLocation;
+          return true;
+        };
+        const sameCategories = (pb, tb) => {
+          if(!sameCatSet(pb.categories, tb.categories)) return false;
+          if(tb.categories.includes('カスタム')) return pb.customCategory === tb.customCategory;
+          return true;
+        };
+        const match = prevBadges.find(pb => sameLocation(pb, tb) && sameCategories(pb, tb));
+        if(!match) return;
+        ctx.strokeStyle = '#4B5563';
+        ctx.fillStyle = '#4B5563';
+        ctx.lineWidth = 6;
+        ctx.lineCap = 'round';
+        if(match.row === tb.row){
+          // same row: straight arrow from previous badge's right edge to today's badge's left edge
+          const x1 = match.rightX, y1 = match.midY, x2 = tb.leftX - 10, y2 = tb.midY;
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(x2+6, y2);
+          ctx.lineTo(x2-14, y2-11);
+          ctx.lineTo(x2-14, y2+11);
+          ctx.closePath();
+          ctx.fill();
+        }else{
+          // row wrap: small arrow icon beside today's badge as a fallback indicator
+          ctx.font = 'bold 22px "Noto Sans CJK JP", sans-serif';
+          ctx.fillText('↩', tb.rightX+6, tb.midY-11);
+        }
+      });
+    }
+
+    const dataUrl = canvas.toDataURL('image/png');
+    lastCalendarPNG = { dataUrl, filename: `${ORG.pngName}_${ym}.png` };
+    document.getElementById('pngModalImg').src = dataUrl;
+    document.getElementById('pngModal').style.display = 'flex';
+  }catch(e){
+    console.error(e);
+    alert('日程表の作成に失敗しました。(' + (e.message || e) + ')');
+  }finally{
+    if(btn){ btn.textContent = originalLabel; btn.disabled = false; }
+  }
+}
+function closePngModal(){
+  document.getElementById('pngModal').style.display = 'none';
+}
+async function saveCalendarPNG(){
+  if(!lastCalendarPNG) return;
+  // Inside LINE's in-app browser, downloads and the share sheet are often blocked.
+  // Open the image in the device's external browser (Safari/Chrome) instead, where saving works normally.
+  if(typeof liff !== 'undefined' && liff.isInClient && liff.isInClient()){
+    try{
+      liff.openWindow({ url: lastCalendarPNG.dataUrl, external: true });
+      return;
+    }catch(e){
+      console.error(e);
+    }
+  }
+  try{
+    const res = await fetch(lastCalendarPNG.dataUrl);
+    const blob = await res.blob();
+    const file = new File([blob], lastCalendarPNG.filename, { type: 'image/png' });
+    if(navigator.canShare && navigator.canShare({ files: [file] })){
+      await navigator.share({ files: [file], title: lastCalendarPNG.filename });
+      return;
+    }
+  }catch(e){
+    console.error(e);
+  }
+  // fallback: standard download link (works in regular browsers, may not work inside LINE's in-app browser)
+  const a = document.createElement('a');
+  a.href = lastCalendarPNG.dataUrl;
+  a.download = lastCalendarPNG.filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+function bulletize(text){
+  return text.split('\n').map(line => line.trim()).filter(Boolean)
+    .map(line => `<li>${escapeHtml(line.replace(/^[・\-*]\s*/, ''))}</li>`).join('');
+}
+
+async function loadMonthSummaryDisplay(){
+  const ym = document.getElementById('monthInput').value;
+  try{
+    const r = await apiGet('getMonthSummary', { month: ym });
+    const current = (r.currentSummary || '').trim();
+    const next = (r.nextSummary || '').trim();
+    const card = document.getElementById('announcementCard');
+    const curEl = document.getElementById('currentMonthSummaryDisplay');
+    const nextEl = document.getElementById('nextMonthSummaryDisplay');
+    if(!current && !next){
+      card.style.display = 'none';
+      curEl.innerHTML = '';
+      nextEl.innerHTML = '';
+      return;
+    }
+    card.style.display = 'block';
+    curEl.innerHTML = current ? `<div class="announce-label">今月のお知らせ</div><ul>${bulletize(current)}</ul>` : '';
+    nextEl.innerHTML = next ? `<div class="announce-label">来月のお知らせ</div><ul>${bulletize(next)}</ul>` : '';
+  }catch(e){
+    console.error(e);
+  }
+}
+
+async function loadMonthSummaryIntoInputs(){
+  const ym = document.getElementById('monthInput').value;
+  try{
+    const r = await apiGet('getMonthSummary', { month: ym });
+    document.getElementById('currentMonthSummaryInput').value = r.currentSummary || '';
+    document.getElementById('nextMonthSummaryInput').value = r.nextSummary || '';
+  }catch(e){
+    console.error(e);
+  }
+}
+
+async function saveMonthSummary(){
+  const ym = document.getElementById('monthInput').value;
+  const current = document.getElementById('currentMonthSummaryInput').value;
+  const next = document.getElementById('nextMonthSummaryInput').value;
+  try{
+    const result = await apiPost({ action: 'saveMonthSummary', month: ym, currentSummary: current, nextSummary: next });
+    if(!result || !result.ok){
+      alert('サマリーの保存に失敗しました。');
+      return;
+    }
+    alert('サマリーを保存しました。');
+    loadMonthSummaryDisplay();
+  }catch(e){
+    console.error(e);
+    alert('サマリーの保存に失敗しました。(' + (e.message || e) + ')');
+  }
+}
+
+// ---------------------------------------------------------------- CSV出力
+function csvEscape(v){
+  const t = String(v == null ? '' : v);
+  return /[",\r\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
+}
+async function buildAttendanceCSV(){
+  const ym = document.getElementById('monthInput').value;
+  invalidateAttendanceListCache();
+  const r = await getAttendanceListShared(ym);
+  const submissions = r.submissions || [];
+  await ensureHolidaysLoaded(practiceDates.map(pd => pd.date));
+  const statusLabel = { attend: '出席', absent: '欠席', late: '遅刻', early: '早退', other: 'その他' };
+  const header = ['団体', '月', '日付', '曜日', '祝日', '会場No', '会場', '時間', '対象区分', '責任者', '名前', '出欠', '時刻', 'メッセージ', '送信者', '更新日時'];
+  const rows = [];
+  for(const sub of submissions){
+    for(const ds of Object.keys(sub.days || {})){
+      const dayData = sub.days[ds] || {};
+      const pd = practiceDates.find(p => p.date === ds);
+      for(const key of Object.keys(dayData)){
+        const idx = parseInt(key.replace('slot', ''), 10);
+        const d = dayData[key];
+        if(!d || !d.status) continue;
+        const slot = pd && pd.slots[idx] ? pd.slots[idx] : null;
+        const loc = slot ? ((slot.location === CUSTOM_LOC && slot.customLocation) ? slot.customLocation : slot.location) : '';
+        const cats = slot ? (slot.categories || []).map(c => (c === 'カスタム' && slot.customCategory) ? slot.customCategory : c).join('・') : '';
+        const coaches = slot ? (slot.coaches || []).map(c => (c === 'カスタム' && slot.customCoach) ? slot.customCoach : c).join('・') : '';
+        rows.push({
+          sortKey: ds + '|' + String(idx).padStart(2, '0') + '|' + sub.name,
+          cols: [ORG.tab, ym, ds, weekdayOf(ds), holidayNameFor(ds) || '', idx + 1, loc, slot ? formatTimeRange(slot) : '', cats, coaches,
+                 sub.name, statusLabel[d.status] || d.status, d.time || '', d.message || '', sub.submitterLineName || '', sub.updatedAt || '']
+        });
+      }
+    }
+  }
+  rows.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+  const lines = [header, ...rows.map(r => r.cols)].map(cols => cols.map(csvEscape).join(','));
+  return { text: lines.join('\r\n'), count: rows.length, filename: `${ORG.tab}_出欠_${ym}.csv` };
+}
+async function downloadCSV(){
+  try{
+    const csv = await buildAttendanceCSV();
+    if(csv.count === 0){ alert('この月の回答がまだありません。'); return; }
+    const blob = new Blob(['﻿' + csv.text], { type: 'text/csv;charset=utf-8' });
+    const file = new File([blob], csv.filename, { type: 'text/csv' });
+    if(navigator.canShare && navigator.canShare({ files: [file] })){
+      try{ await navigator.share({ files: [file], title: csv.filename }); return; }catch(e){ if(e && e.name === 'AbortError') return; }
+    }
+    const inLine = typeof liff !== 'undefined' && liff.isInClient && liff.isInClient();
+    if(inLine){
+      alert('LINEアプリの中ではダウンロードできないことがあります。うまくいかない時は「CSVをコピー」を使うか、Safari/Chromeでこのページを開いてください。');
+    }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = csv.filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  }catch(e){
+    console.error(e);
+    alert('CSVの作成に失敗しました。(' + (e.message || e) + ')');
+  }
+}
+async function copyCSV(){
+  try{
+    const csv = await buildAttendanceCSV();
+    if(csv.count === 0){ alert('この月の回答がまだありません。'); return; }
+    try{
+      await navigator.clipboard.writeText(csv.text);
+    }catch(e){
+      const ta = document.createElement('textarea');
+      ta.value = csv.text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    alert(`${csv.count}行のCSVをコピーしました。メモ帳やスプレッドシートに貼り付けてください。`);
+  }catch(e){
+    console.error(e);
+    alert('CSVのコピーに失敗しました。(' + (e.message || e) + ')');
+  }
+}
+
+// ---------------------------------------------------------------- 団体の切り替え
+function renderOrgTabs(){
+  document.getElementById('orgTabs').innerHTML = ORG_ORDER.map(id => `
+    <button type="button" class="org-tab ${id === ORG.id ? 'on' : ''}" aria-pressed="${id === ORG.id}" onclick="switchOrg('${id}')">${ORGS[id].tab}</button>
+  `).join('');
+}
+function applyOrg(id){
+  const o = ORGS[id];
+  if(!o) return;
+  ORG = o;
+  LOCATIONS = o.locations; CUSTOM_LOC = o.customLoc; CATEGORIES = o.categories; COACHES = o.coaches;
+  SCHOOL_NOTES = o.schoolNotes; MAX_SLOTS = o.maxSlots;
+  const root = document.documentElement.style;
+  Object.keys(o.theme).forEach(k => root.setProperty('--' + k, o.theme[k]));
+  document.getElementById('orgTitle').textContent = o.title;
+  document.getElementById('orgFooter').textContent = o.footer;
+  document.title = o.title;
+  renderOrgTabs();
+  try{ localStorage.setItem('attendanceOrg', id); }catch(e){}
+  practiceDates = [];
+  adminSelection = new Map();
+  document.getElementById('childrenContainer').innerHTML = '';
+  document.getElementById('adminPanel').style.display = 'none';
+  document.getElementById('statusMsg').textContent = '';
+  document.getElementById('summaryContainer').innerHTML = '<div class="empty">読み込み中…</div>';
+  document.getElementById('announcementCard').style.display = 'none';
+  invalidateAttendanceListCache();
+}
+function switchOrg(id){
+  if(id === ORG.id) return;
+  rememberChildNames();
+  applyOrg(id);
+  loadPracticeDates();
+}
+
+document.getElementById('monthInput').addEventListener('change', () => {
+  document.getElementById('childrenContainer').innerHTML = '';
+  document.getElementById('adminPanel').style.display = 'none';
+  loadPracticeDates();
+});
+
+async function initLiff(){
+  const greeting = document.getElementById('userGreeting');
+  try{
+    if(typeof liff === 'undefined'){
+      greeting.textContent = 'お子様・コーチのお名前を入力してください';
+      return;
+    }
+    await liff.init({ liffId: LIFF_ID });
+    if(!liff.isLoggedIn()){ liff.login(); return; }
+    const profile = await liff.getProfile();
+    lineDisplayName = profile.displayName;
+    greeting.textContent = `${profile.displayName} さん、こんにちは`;
+  }catch(e){
+    console.warn('LIFF init skipped (プレビュー環境):', e);
+    greeting.textContent = 'お子様・コーチのお名前を入力してください';
+  }
+}
+
+(function bootstrap(){
+  if(!isFirebaseConfigured()){
+    const banner = document.createElement('div');
+    banner.className = 'setup-banner';
+    banner.textContent = 'Firebaseの設定が未入力です。index.html の先頭にある FIREBASE_CONFIG に、Firebaseコンソールの値を貼り付けてください。';
+    document.querySelector('.wrap').insertBefore(banner, document.getElementById('orgTabs'));
+  }
+  initFirebase();
+  // ?org=skh / LIFFの liff.state=?org=skh で団体を指定 → 前回の団体 → BC鶴岡
+  const params = new URLSearchParams(location.search);
+  const stateMatch = /org=([a-z]+)/.exec(params.get('liff.state') || '');
+  const wanted = params.get('org') || (stateMatch && stateMatch[1]);
+  let saved = null;
+  try{ saved = localStorage.getItem('attendanceOrg'); }catch(e){}
+  applyOrg(ORGS[wanted] ? wanted : (ORGS[saved] ? saved : 'bc'));
+  liffReadyPromise = initLiff();   // LINEの初期化とFirestoreの読み込みを同時に走らせる
+  loadPracticeDates();
+})();
+</script>
+
+</body>
+</html>
