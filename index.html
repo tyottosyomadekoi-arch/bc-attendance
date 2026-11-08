@@ -378,6 +378,12 @@
   .ev-note{font-size:11px;color:var(--muted);margin-top:6px;}
   .mc-ev{font-size:9px;line-height:1;}
   .mc-cell.evd{background:#FEF3C7;}
+  .yr-nav{position:sticky;top:-12px;z-index:5;display:flex;gap:3px;background:#fff;margin:-12px -12px 12px;padding:8px 8px;border-bottom:2px solid var(--navy);overflow-x:auto;}
+  .yr-nav a{flex:1;min-width:0;text-align:center;font-size:10.5px;font-weight:700;color:var(--navy);background:#EEF3F9;border-radius:8px;padding:6px 2px;cursor:pointer;white-space:nowrap;}
+  .yr-nav a b{display:block;width:16px;height:16px;line-height:16px;border-radius:50%;background:var(--navy);color:#fff;font-size:10px;margin:0 auto 2px;}
+  .yr-sec{scroll-margin-top:52px;border:2px solid var(--border);border-radius:14px;padding:0 12px 12px;margin-bottom:22px;overflow:hidden;}
+  .yr-title{display:flex;align-items:center;gap:8px;background:var(--navy);color:#fff;font-size:15px;font-weight:800;margin:0 -12px 12px;padding:10px 12px;}
+  .yr-num{display:inline-block;width:24px;height:24px;line-height:24px;text-align:center;border-radius:50%;background:#fff;color:var(--navy);font-size:14px;}
 </style>
 </head>
 <body>
@@ -421,7 +427,7 @@
 </div>
 
 <div id="yearOverlay" class="cal-overlay" style="display:none;">
-  <div class="cal-sheet"><div class="mc-title" style="margin-bottom:10px;">年間登録・大会行事</div><div id="yearBody"></div></div>
+  <div class="cal-sheet"><div class="mc-title" style="margin-bottom:10px;">年間登録</div><div id="yearBody"></div></div>
 </div>
 
 <div class="wrap">
@@ -436,7 +442,7 @@
       <input type="month" id="monthInput">
     </div>
     <div id="adminPanel" style="display:none;">
-      <button type="button" class="year-btn" onclick="openYearEditor()">📅 年間でまとめて登録・大会や行事</button>
+      <button type="button" class="year-btn" onclick="openYearEditor()">📅 年間でまとめて登録・大会や練習会・行事</button>
       <div class="tpl-box" id="tplBox"></div>
       <label class="field-label">練習日をタップして設定（コーチ用）</label>
       <div class="cal-grid" id="calGrid"></div>
@@ -1253,7 +1259,7 @@ function jumpToDate(ds){
 // ---- 年間登録 / 大会・行事 ----
 let monthEvents = [];
 let yr = null;
-const EV_KINDS = ['大会','合宿','行事'];
+const EV_KINDS = ['大会','練習会','行事'];
 function normalizeEvents(raw){
   return (raw || []).filter(e => e && e.date && e.title).map(e => ({
     date: e.date, endDate: e.endDate || '', kind: e.kind || '行事', title: e.title, place: e.place || '', memo: e.memo || ''
@@ -1276,7 +1282,7 @@ function eventLabel(ev){
   return `${range}（${weekdayOf(ev.date)}）`;
 }
 function eventLineHtml(ev){
-  const icon = ev.kind === '大会' ? '🏆' : ev.kind === '合宿' ? '🏕' : '🚩';
+  const icon = ev.kind === '大会' ? '🏆' : ev.kind === '練習会' ? '🏸' : '🚩';
   return `<div class="ev-line"><span class="ev-kind">${icon} ${escapeHtml(ev.kind)}</span><b>${escapeHtml(eventLabel(ev))}</b> ${escapeHtml(ev.title)}${ev.place ? `<span class="ev-sub">＠${escapeHtml(ev.place)}</span>` : ''}${ev.memo ? `<div class="ev-sub">${escapeHtml(ev.memo)}</div>` : ''}</div>`;
 }
 function renderEventsCard(){
@@ -1285,7 +1291,7 @@ function renderEventsCard(){
   const list = monthEvents.slice().sort((a,b) => a.date.localeCompare(b.date));
   if(list.length === 0){ card.style.display = 'none'; return; }
   card.style.display = 'block';
-  card.innerHTML = `<h2>今月の大会・行事</h2>${list.map(eventLineHtml).join('')}<div class="ev-note">※出欠の入力は不要です（練習日の出欠のみ入力してください）。</div>`;
+  card.innerHTML = `<h2>今月の大会・練習会・行事</h2>${list.map(eventLineHtml).join('')}<div class="ev-note">※出欠の入力は不要です（練習日の出欠のみ入力してください）。</div>`;
 }
 
 function fiscalStartYm(kind, year){ return kind === 'fy' ? `${year}-04` : `${year}-01`; }
@@ -1530,6 +1536,7 @@ function yrMiniMonth(ym){
   const cnt = map.size;
   return `<div class="yr-month"><div class="yr-mh">${y !== Number(yr.startYm.slice(0,4)) || m === 1 ? `${y}年` : ''}${m}月<span>${cnt}日</span></div><div class="yr-grid">${h}</div>${evHtml}</div>`;
 }
+function yrJump(n){ const el = document.getElementById('ys' + n); if(el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 function renderYear(){
   const ov = document.getElementById('yearBody');
   if(!ov || !yr) return;
@@ -1568,18 +1575,11 @@ function renderYear(){
   const kindChips = EV_KINDS.map(k => `<span class="tpl-chip ${evDraft.kind === k ? 'on' : ''}" onclick="evSetKind('${k}')">${k}</span>`).join('');
   const [sy] = yr.startYm.split('-');
   ov.innerHTML = `
-    <div class="yr-sec"><div class="tpl-title">① 期間</div>
+    <div class="yr-nav">${[['1','期間'],['2','大会等'],['3','カレンダー'],['4','曜日の型'],['5','休み']].map(([n,t]) => `<a onclick="yrJump(${n})"><b>${n}</b>${t}</a>`).join('')}</div>
+    <div class="yr-sec s1" id="ys1"><div class="yr-title"><span class="yr-num">1</span>期間</div>
       <div class="yr-row"><select id="yrKind" onchange="yrSetPeriod()"><option value="fy" ${yr.kind === 'fy' ? 'selected' : ''}>年度（4月〜翌3月）</option><option value="cy" ${yr.kind === 'cy' ? 'selected' : ''}>暦年（1月〜12月）</option></select>
       <input type="number" id="yrYear" value="${yr.year}" min="2024" max="2100" onchange="yrSetPeriod()" style="width:90px"> 年</div></div>
-    <div class="yr-sec"><div class="tpl-title">② 曜日の型（複数OK）</div>${blocksHtml}
-      <button type="button" class="yr-add" onclick="yrAddBlock()">＋ 型を追加（例：日曜は別会場）</button>
-      <label class="yr-check"><input type="checkbox" ${yr.skipHol ? 'checked' : ''} onchange="yr.skipHol=this.checked"> 祝日は練習日にしない</label></div>
-    <div class="yr-sec"><div class="tpl-title">③ 休み期間</div>${breaksHtml}
-      <button type="button" class="yr-add" onclick="yrAddBreak()">＋ 休み期間を追加（年末年始・お盆など）</button></div>
-    <div class="mc-actions"><button type="button" class="tpl-apply" onclick="yrApplyBlocks()" ${yr.loading ? 'disabled' : ''}>型を12か月に反映</button><button type="button" class="tpl-copy" onclick="yrCopyLastYear()" ${yr.loading ? 'disabled' : ''}>去年をコピー</button></div>
-    <div class="mc-hint">登録済みの日・過去の日は変更しません。</div>
-    <div class="yr-sec"><div class="tpl-title">④ 年間カレンダー（日付をタップで変更）</div><div class="mc-legend">${legend}</div>${dayHtml}${calHtml}</div>
-    <div class="yr-sec"><div class="tpl-title">⑤ 大会・合宿・行事</div>
+    <div class="yr-sec s2" id="ys2"><div class="yr-title"><span class="yr-num">2</span>大会・練習会・行事</div>
       <div>${kindChips}</div>
       <input type="text" placeholder="名前（例：春季大会）" value="${escapeHtml(evDraft.title)}" oninput="evDraft.title=this.value" maxlength="30">
       <div class="yr-row"><input type="date" value="${evDraft.date}" onchange="evDraft.date=this.value"> 〜 <input type="date" value="${evDraft.endDate}" onchange="evDraft.endDate=this.value"></div>
@@ -1588,6 +1588,14 @@ function renderYear(){
       <input type="text" placeholder="メモ（任意）" value="${escapeHtml(evDraft.memo)}" oninput="evDraft.memo=this.value" maxlength="60">
       <button type="button" class="yr-add" onclick="yrAddEvent()">＋ 追加</button>
       <div style="margin-top:10px">${evList}</div></div>
+    <div class="yr-sec s3" id="ys3"><div class="yr-title"><span class="yr-num">3</span>年間カレンダー（日付をタップで変更）</div><div class="mc-legend">${legend}</div>${dayHtml}${calHtml}</div>
+    <div class="yr-sec s4" id="ys4"><div class="yr-title"><span class="yr-num">4</span>曜日の型（複数OK）</div>${blocksHtml}
+      <button type="button" class="yr-add" onclick="yrAddBlock()">＋ 型を追加（例：日曜は別会場）</button>
+      <label class="yr-check"><input type="checkbox" ${yr.skipHol ? 'checked' : ''} onchange="yr.skipHol=this.checked"> 祝日は練習日にしない</label></div>
+    <div class="yr-sec s5" id="ys5"><div class="yr-title"><span class="yr-num">5</span>休みの設定</div>${breaksHtml}
+      <button type="button" class="yr-add" onclick="yrAddBreak()">＋ 休み期間を追加（年末年始・お盆など）</button></div>
+    <div class="mc-actions"><button type="button" class="tpl-apply" onclick="yrApplyBlocks()" ${yr.loading ? 'disabled' : ''}>型を12か月に反映</button><button type="button" class="tpl-copy" onclick="yrCopyLastYear()" ${yr.loading ? 'disabled' : ''}>去年をコピー</button></div>
+    <div class="mc-hint">登録済みの日・過去の日は変更しません。</div>
     <div class="mc-actions"><button type="button" class="save-btn" id="yrSaveBtn" style="margin-top:0" onclick="yrSaveAll()" ${yr.loading ? 'disabled' : ''}>12か月分を保存</button><button type="button" class="mc-close-btn" onclick="closeYearEditor()">閉じる</button></div>`;
   document.getElementById('yearOverlay').scrollTop = scroll;
 }
