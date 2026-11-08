@@ -1492,24 +1492,32 @@ async function yrSaveAll(){
   });
   if(!todo.length){ alert('変更はありません。'); return; }
   btn.disabled = true; btn.textContent = '保存中…';
-  try{
-    for(const t of todo){
+  const fails = []; let okCount = 0;
+  for(const t of todo){
+    try{
       const r = t.kind === 'dates'
         ? await apiPost({ action: 'savePracticeDates', month: t.ym, dates: t.arr })
         : await apiPost({ action: 'saveEvents', month: t.ym, events: t.evs });
       if(!r || !r.ok) throw new Error('save failed');
       if(t.kind === 'dates') yr.orig.set(t.ym, JSON.stringify(t.arr)); else yr.origEv.set(t.ym, JSON.stringify(t.evs));
+      okCount++;
+    }catch(e){
+      console.error(e);
+      const n = t.kind === 'dates' ? `${t.arr.length}日` : `${t.evs.length}件`;
+      fails.push(`${t.ym} ${t.kind === 'dates' ? '練習日' : '行事'}(${n}) … ${(e && (e.code || e.message)) || '不明'}`);
     }
-    alert('12か月分を保存しました。');
-    document.getElementById('yearOverlay').style.display = 'none';
-    document.body.style.overflow = '';
-    yr = null;
-    loadPracticeDates();
-  }catch(e){
-    console.error(e);
-    alert('保存に失敗しました。\n原因：' + ((e && (e.code || e.message)) || '不明') + '\n（permission-denied の場合は、Firebaseのルールの「公開」が必要です）');
-    btn.disabled = false; btn.textContent = '12か月分を保存';
   }
+  if(fails.length){
+    alert(`保存できなかったもの：\n${fails.join('\n')}\n\n（成功：${okCount}件）`);
+    btn.disabled = false; btn.textContent = '12か月分を保存';
+    renderYear();
+    return;
+  }
+  alert('12か月分を保存しました。');
+  document.getElementById('yearOverlay').style.display = 'none';
+  document.body.style.overflow = '';
+  yr = null;
+  loadPracticeDates();
 }
 function yrMiniMonth(ym){
   const [y, m] = ym.split('-').map(Number);
