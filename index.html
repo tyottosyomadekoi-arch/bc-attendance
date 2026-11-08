@@ -340,6 +340,44 @@
   .org-tag{display:inline-block;color:#fff;font-size:10.5px;font-weight:700;border-radius:8px;padding:1px 7px;margin-right:6px;vertical-align:middle;}
   .merged-note{font-size:11.5px;font-weight:700;color:var(--navy);background:var(--light-blue);border-radius:6px;padding:4px 8px;margin:0 0 8px;}
   .setup-banner{background:#FBE9E8;border:1.5px solid #C0392B;color:#C0392B;border-radius:10px;padding:10px 12px;font-size:12.5px;font-weight:700;margin-bottom:14px;}
+  .yr-sec{margin-bottom:16px;}
+  .yr-sec input[type=text],.yr-sec input[type=date],.yr-sec input[type=time],.yr-sec input[type=number],.yr-sec select{padding:8px 9px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;margin:0 0 8px;box-sizing:border-box;}
+  .yr-sec input[type=text]{width:100%;}
+  .yr-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .yr-block,.yr-daysheet{border:1.5px solid var(--border);border-radius:10px;padding:10px;margin-bottom:8px;background:#fff;}
+  .yr-daysheet{border-color:var(--navy);}
+  .yr-block-h{display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:800;color:var(--navy);margin-bottom:6px;}
+  .yr-x{border:none;background:none;color:#B03A2E;font-size:12px;font-weight:700;cursor:pointer;padding:4px 6px;}
+  .yr-add{width:100%;border:1.5px dashed var(--border);background:#fff;color:var(--navy);border-radius:10px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px;}
+  .yr-check{display:block;font-size:13px;margin-top:6px;}
+  .yr-break{display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-bottom:4px;}
+  .yr-break input[type=text]{width:140px;flex:1;}
+  .yr-months{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .yr-month{border:1px solid var(--border);border-radius:8px;padding:6px;}
+  .yr-mh{font-size:12px;font-weight:800;color:var(--navy);display:flex;justify-content:space-between;margin-bottom:3px;}
+  .yr-mh span{font-weight:600;color:var(--muted);}
+  .yr-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;}
+  .yr-wd{font-size:8px;text-align:center;color:var(--muted);}
+  .yr-wd.sun{color:#B03A2E;}.yr-wd.sat{color:#1D4ED8;}
+  .yr-d{font-size:9.5px;text-align:center;line-height:20px;height:20px;border-radius:4px;color:#444;cursor:pointer;box-sizing:border-box;}
+  .yr-d.hol{color:#B03A2E;}
+  .yr-d.off{border:1.5px dashed #DC2626;color:#DC2626;line-height:17px;}
+  .yr-d.ev{box-shadow:0 0 0 2px #F59E0B inset;}
+  .yr-d.ev:not([style*=background]){background:#FDE68A;}
+  .yr-ev{font-size:10.5px;color:#B45309;font-weight:700;margin-top:2px;}
+  .yr-lg{display:inline-block;font-size:10.5px;font-weight:700;border-radius:10px;padding:1px 8px;margin-right:6px;}
+  .yr-lg.off{border:1.5px dashed #DC2626;color:#DC2626;}
+  .yr-lg.ev{background:#FDE68A;color:#B45309;}
+  .yr-off-btn{border:1.5px solid #DC2626;background:#fff;color:#DC2626;}
+  .tpl-apply:disabled,.tpl-copy:disabled{opacity:.5;}
+  .year-btn{width:100%;margin-bottom:10px;border:2px solid var(--navy);background:#fff;color:var(--navy);border-radius:10px;padding:11px;font-size:14px;font-weight:800;cursor:pointer;}
+  .ev-line{font-size:13px;line-height:1.6;margin-bottom:4px;}
+  .ev-kind{display:inline-block;background:#FEF3C7;color:#92400E;font-size:10.5px;font-weight:800;border-radius:8px;padding:1px 7px;margin-right:6px;}
+  .ev-sub{font-size:11.5px;color:var(--muted);margin-left:4px;}
+  .ev-row{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid var(--border);padding:4px 0;}
+  .ev-note{font-size:11px;color:var(--muted);margin-top:6px;}
+  .mc-ev{font-size:9px;line-height:1;}
+  .mc-cell.evd{background:#FEF3C7;}
 </style>
 </head>
 <body>
@@ -374,12 +412,16 @@
     </div>
     <div class="mc-grid" id="mcGrid"></div>
     <div class="mc-legend" id="mcLegend"></div>
+    <div id="mcEvents" style="margin-top:8px;"></div>
     <div class="mc-hint">日付をタップすると、その日の出欠入力に移ります。</div>
     <div class="mc-actions">
-      <button type="button" class="mc-img-btn" onclick="exportCalendarPNG()">画像で保存・共有</button>
       <button type="button" class="mc-close-btn" onclick="closeCalOverlay()">閉じる</button>
     </div>
   </div>
+</div>
+
+<div id="yearOverlay" class="cal-overlay" style="display:none;">
+  <div class="cal-sheet"><div class="mc-title" style="margin-bottom:10px;">年間登録・大会行事</div><div id="yearBody"></div></div>
 </div>
 
 <div class="wrap">
@@ -394,6 +436,7 @@
       <input type="month" id="monthInput">
     </div>
     <div id="adminPanel" style="display:none;">
+      <button type="button" class="year-btn" onclick="openYearEditor()">📅 年間でまとめて登録・大会や行事</button>
       <div class="tpl-box" id="tplBox"></div>
       <label class="field-label">練習日をタップして設定（コーチ用）</label>
       <div class="cal-grid" id="calGrid"></div>
@@ -418,6 +461,8 @@
     <div id="currentMonthSummaryDisplay"></div>
     <div id="nextMonthSummaryDisplay"></div>
   </div>
+
+  <div class="card" id="eventsCard" style="display:none;"></div>
 
   <div id="childrenContainer"></div>
   <button class="add-child-btn" onclick="addChild()">＋ お子様を追加（兄弟対応）</button>
@@ -539,7 +584,7 @@ async function apiGet(action, params){
   const ym = params.month;
   if(action === 'getPracticeDates'){
     const snap = await monthRef(orgId, ym).get();
-    return { dates: (snap.exists && snap.data().dates) || [] };
+    return { dates: (snap.exists && snap.data().dates) || [], events: (snap.exists && snap.data().events) || [] };
   }
   if(action === 'getMonthSummary'){
     const snap = await monthRef(orgId, ym).get();
@@ -562,6 +607,10 @@ async function apiPost(payload){
   const now = new Date().toISOString();
   if(payload.action === 'savePracticeDates'){
     await monthRef(orgId, ym).set({ dates: payload.dates, updatedAt: now }, { merge: true });
+    return { ok: true };
+  }
+  if(payload.action === 'saveEvents'){
+    await monthRef(orgId, ym).set({ events: payload.events || [], updatedAt: now }, { merge: true });
     return { ok: true };
   }
   if(payload.action === 'saveMonthSummary'){
@@ -1097,16 +1146,19 @@ let loadSeq = 0;
 async function loadPracticeDates(){
   const ym = document.getElementById('monthInput').value;
   const my = ++loadSeq;
-  let dates = [];
+  let dates = [], evs = [];
   try{
     const r = await apiGet('getPracticeDates', { month: ym });
     dates = normalizePracticeDates(r.dates);
+    evs = normalizeEvents(r.events);
   }catch(e){
     console.error(e);
     dates = [];
   }
   if(my !== loadSeq) return;
   practiceDates = dates;
+  monthEvents = evs;
+  renderEventsCard();
   if(dates.length > 0){
     await ensureHolidaysLoaded(dates.map(pd => pd.date));
   }
@@ -1145,6 +1197,7 @@ function renderMonthCal(){
   const offset = firstWeekday(ym);
   for(let i = 0; i < offset; i++) html += '<div class="mc-cell"></div>';
   const used = new Set();
+  const evDaySet = eventDaysSet(monthEvents);
   const total = daysInMonth(ym);
   for(let d = 1; d <= total; d++){
     const ds = dateStr(ym, d);
@@ -1164,12 +1217,14 @@ function renderMonthCal(){
       });
       if(pd.slots.length > 1) body += `<div class="mc-more">他${pd.slots.length - 1}会場</div>`;
     }
+    if(evDaySet.has(ds)){ cls.push('evd'); body += '<div class="mc-ev">🚩</div>'; }
     if(ds === today) cls.push('today');
     if(ds < today) cls.push('past');
     html += `<div class="${cls.join(' ')}" ${pd ? `onclick="jumpToDate('${ds}')"` : ''}><div class="mc-day">${d}</div>${body}</div>`;
   }
   grid.innerHTML = html;
   document.getElementById('mcLegend').innerHTML = Array.from(used).map(l => `<span class="loc-badge" data-loc="${escapeHtml(l)}">${escapeHtml(l)}</span>`).join('');
+  document.getElementById('mcEvents').innerHTML = monthEvents.length ? monthEvents.slice().sort((a,b) => a.date.localeCompare(b.date)).map(eventLineHtml).join('') : '';
 }
 function shiftMonthView(delta){
   const mi = document.getElementById('monthInput');
@@ -1193,6 +1248,348 @@ function jumpToDate(ds){
   if(!row){ return; }
   row.scrollIntoView({ behavior: 'smooth', block: 'center' });
   row.classList.remove('flash'); void row.offsetWidth; row.classList.add('flash');
+}
+
+// ---- 年間登録 / 大会・行事 ----
+let monthEvents = [];
+let yr = null;
+const EV_KINDS = ['大会','合宿','行事'];
+function normalizeEvents(raw){
+  return (raw || []).filter(e => e && e.date && e.title).map(e => ({
+    date: e.date, endDate: e.endDate || '', kind: e.kind || '行事', title: e.title, place: e.place || '', memo: e.memo || ''
+  }));
+}
+function eventDaysSet(events){
+  const s = new Set();
+  events.forEach(ev => {
+    const a = new Date(ev.date + 'T00:00:00');
+    const b = new Date((ev.endDate && ev.endDate >= ev.date ? ev.endDate : ev.date) + 'T00:00:00');
+    for(let d = new Date(a), n = 0; d <= b && n < 40; d.setDate(d.getDate() + 1), n++){
+      s.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+    }
+  });
+  return s;
+}
+function md(ds){ const p = ds.split('-'); return `${Number(p[1])}/${Number(p[2])}`; }
+function eventLabel(ev){
+  const range = ev.endDate && ev.endDate > ev.date ? `${md(ev.date)}〜${md(ev.endDate)}` : md(ev.date);
+  return `${range}（${weekdayOf(ev.date)}）`;
+}
+function eventLineHtml(ev){
+  const icon = ev.kind === '大会' ? '🏆' : ev.kind === '合宿' ? '🏕' : '🚩';
+  return `<div class="ev-line"><span class="ev-kind">${icon} ${escapeHtml(ev.kind)}</span><b>${escapeHtml(eventLabel(ev))}</b> ${escapeHtml(ev.title)}${ev.place ? `<span class="ev-sub">＠${escapeHtml(ev.place)}</span>` : ''}${ev.memo ? `<div class="ev-sub">${escapeHtml(ev.memo)}</div>` : ''}</div>`;
+}
+function renderEventsCard(){
+  const card = document.getElementById('eventsCard');
+  if(!card) return;
+  const list = monthEvents.slice().sort((a,b) => a.date.localeCompare(b.date));
+  if(list.length === 0){ card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  card.innerHTML = `<h2>今月の大会・行事</h2>${list.map(eventLineHtml).join('')}<div class="ev-note">※出欠の入力は不要です（練習日の出欠のみ入力してください）。</div>`;
+}
+
+function fiscalStartYm(kind, year){ return kind === 'fy' ? `${year}-04` : `${year}-01`; }
+function yrMonths(){
+  const [y, m] = yr.startYm.split('-').map(Number);
+  return Array.from({length: 12}, (_, i) => { const d = new Date(y, m - 1 + i, 1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; });
+}
+function cloneEntry(d){
+  return { parentDuty: d.parentDuty || '', slots: d.slots.map(s => ({ ...s, categories: [...(s.categories||[])], coaches: [...(s.coaches||[])], schoolNotes: [...(s.schoolNotes||[])] })) };
+}
+function serializeMonth(map){
+  return Array.from(map.entries()).sort((a,b) => a[0].localeCompare(b[0])).map(([date, d]) => ({
+    date, parentDuty: d.parentDuty || '',
+    slots: d.slots.map(s => ({
+      location: s.location || '', customLocation: s.customLocation || '',
+      startTime: s.startTime || '', endTime: s.endTime || '', allDay: !!s.allDay,
+      categories: s.categories || [], customCategory: s.customCategory || '', coaches: s.coaches || [], customCoach: s.customCoach || '',
+      message: s.message || '', schoolNotes: s.schoolNotes || []
+    }))
+  }));
+}
+function initialBlocks(){
+  const groups = {};
+  const usual = ORG.id === 'tsururoku' ? [0,2,4,6] : ORG.id === 'bc' ? [2,4] : [];
+  usual.forEach(k => {
+    const w = (ORG.weekdayDefaults || {})[k]; if(!w) return;
+    const key = [w.location, w.startTime, w.endTime, (w.coaches||[]).join(',')].join('|');
+    (groups[key] = groups[key] || { wd: new Set(), location: w.location, start: w.startTime, end: w.endTime, cats: new Set(w.categories || ORG.defaultCategories), coaches: new Set(w.coaches || []) }).wd.add(Number(k));
+  });
+  const arr = Object.values(groups);
+  return arr.length ? arr : [newBlock()];
+}
+function newBlock(){ return { wd: new Set(), location: '', start: '19:00', end: '21:00', cats: new Set(ORG.defaultCategories), coaches: new Set() }; }
+
+async function openYearEditor(){
+  const now = new Date();
+  const fy = (now.getMonth() + 1) >= 4 ? now.getFullYear() : now.getFullYear() - 1;
+  yr = { kind: 'fy', year: fy, startYm: fyStart(fy), blocks: initialBlocks(), skipHol: true, breaks: [], off: new Set(), months: new Map(), orig: new Map(), events: new Map(), origEv: new Map(), loading: true, day: null };
+  document.getElementById('yearOverlay').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+  renderYear();
+  await loadYearData();
+}
+function fyStart(y){ return `${y}-04`; }
+async function loadYearData(){
+  yr.loading = true; yr.months = new Map(); yr.orig = new Map(); yr.events = new Map(); yr.origEv = new Map(); yr.off = new Set();
+  renderYear();
+  const months = yrMonths();
+  const results = await Promise.all(months.map(ym => apiGet('getPracticeDates', { month: ym }).catch(() => ({ dates: [], events: [] }))));
+  months.forEach((ym, i) => {
+    const dates = normalizePracticeDates(results[i].dates);
+    yr.months.set(ym, new Map(dates.map(pd => [pd.date, cloneEntry(pd)])));
+    yr.orig.set(ym, JSON.stringify(serializeMonth(yr.months.get(ym))));
+    const evs = normalizeEvents(results[i].events);
+    yr.events.set(ym, evs);
+    yr.origEv.set(ym, JSON.stringify(evs));
+  });
+  await ensureHolidaysLoaded([`${months[0]}-01`, `${months[11]}-01`]);
+  yr.loading = false;
+  renderYear();
+}
+function closeYearEditor(){
+  if(yr && yrDirty() && !confirm('保存していない変更があります。閉じてよいですか？')) return;
+  document.getElementById('yearOverlay').style.display = 'none';
+  document.body.style.overflow = '';
+  yr = null;
+}
+function yrDirty(){
+  if(!yr || yr.loading) return false;
+  return yrMonths().some(ym => JSON.stringify(serializeMonth(yr.months.get(ym))) !== yr.orig.get(ym) || JSON.stringify(yr.events.get(ym)) !== yr.origEv.get(ym));
+}
+function yrSetPeriod(){
+  const kind = document.getElementById('yrKind').value;
+  const year = Number(document.getElementById('yrYear').value);
+  if(!year) return;
+  if(yrDirty() && !confirm('期間を変えると、保存していない変更は消えます。よいですか？')){ renderYear(); return; }
+  yr.kind = kind; yr.year = year; yr.startYm = fiscalStartYm(kind, year);
+  loadYearData();
+}
+function yrChip(label, on, fn, args){ return `<span class="tpl-chip ${on ? 'on' : ''}" onclick="${fn}(${args})">${escapeHtml(label)}</span>`; }
+function yrBlockToggle(i, kind, v){
+  const b = yr.blocks[i];
+  if(kind === 'wd'){ b.wd.has(v) ? b.wd.delete(v) : b.wd.add(v); }
+  else if(kind === 'loc'){ b.location = (b.location === v ? '' : v); }
+  else if(kind === 'cat'){ b.cats.has(v) ? b.cats.delete(v) : b.cats.add(v); }
+  else if(kind === 'coach'){ b.coaches.has(v) ? b.coaches.delete(v) : b.coaches.add(v); }
+  renderYear();
+}
+function yrAddBlock(){ yr.blocks.push(newBlock()); renderYear(); }
+function yrDelBlock(i){ yr.blocks.splice(i, 1); if(!yr.blocks.length) yr.blocks.push(newBlock()); renderYear(); }
+function yrAddBreak(){ yr.breaks.push({ from: '', to: '', label: '' }); renderYear(); }
+function yrDelBreak(i){ yr.breaks.splice(i, 1); renderYear(); }
+function inBreak(ds){ return yr.breaks.some(b => b.from && ds >= b.from && ds <= (b.to || b.from)); }
+
+function yrApplyBlocks(){
+  const valid = yr.blocks.filter(b => b.wd.size && b.location);
+  if(!valid.length){ alert('曜日と会場を選んだ型が1つもありません。'); return; }
+  const today = getTodayStr();
+  let added = 0;
+  yrMonths().forEach(ym => {
+    const map = yr.months.get(ym);
+    monthDays(ym).forEach(({ ds, wd }) => {
+      if(ds < today || map.has(ds)) return;
+      if(inBreak(ds)){ yr.off.add(ds); return; }
+      if(yr.skipHol && holidayNameFor(ds)) return;
+      const b = valid.find(x => x.wd.has(wd));
+      if(!b) return;
+      map.set(ds, { parentDuty: '', slots: [{ ...defaultSlot(), location: b.location, startTime: b.start, endTime: b.end, categories: Array.from(b.cats), coaches: Array.from(b.coaches) }] });
+      added++;
+    });
+  });
+  renderYear();
+  alert(`${added}日分を追加しました。下のカレンダーで確認し、例外の日をタップして直してください。`);
+}
+async function yrCopyLastYear(){
+  const today = getTodayStr();
+  let added = 0;
+  const months = yrMonths();
+  const prevs = await Promise.all(months.map(ym => {
+    const [y, m] = ym.split('-');
+    return apiGet('getPracticeDates', { month: `${Number(y) - 1}-${m}` }).catch(() => ({ dates: [] }));
+  }));
+  months.forEach((ym, i) => {
+    const src = normalizePracticeDates(prevs[i].dates);
+    const map = yr.months.get(ym);
+    const first = new Date(dateStr(ym, 1) + 'T00:00:00').getDay();
+    const total = daysInMonth(ym);
+    src.forEach(pd => {
+      const sd = new Date(pd.date + 'T00:00:00');
+      const nth = Math.floor((sd.getDate() - 1) / 7);
+      const day = 1 + ((sd.getDay() - first + 7) % 7) + nth * 7;
+      if(day > total) return;
+      const ds = dateStr(ym, day);
+      if(ds < today || map.has(ds)) return;
+      if(inBreak(ds)){ yr.off.add(ds); return; }
+      if(yr.skipHol && holidayNameFor(ds)) return;
+      map.set(ds, { parentDuty: '', slots: pd.slots.map(s => ({ ...s, categories: [...(s.categories||[])], coaches: [...(s.coaches||[])], message: '', schoolNotes: [] })) });
+      added++;
+    });
+  });
+  renderYear();
+  alert(added ? `去年の同じ週・曜日から${added}日分をコピーしました。` : 'コピーできる日がありませんでした（去年のデータなし、または登録済み）。');
+}
+function yrDayTap(ds){
+  const ym = ds.slice(0, 7);
+  const map = yr.months.get(ym);
+  if(!map) return;
+  const ent = map.get(ds);
+  const sl = ent ? ent.slots[0] : defaultSlotForDate(ds);
+  yr.day = { ds, location: sl.location || '', start: sl.startTime || '19:00', end: sl.endTime || '21:00' };
+  renderYear();
+}
+function yrDayLoc(l){ yr.day.location = (yr.day.location === l ? '' : l); renderYear(); }
+function yrDayClose(){ yr.day = null; renderYear(); }
+function yrDayApply(){
+  const d = yr.day; const map = yr.months.get(d.ds.slice(0, 7));
+  if(!d.location){ alert('会場を選んでください。'); return; }
+  const ent = map.get(d.ds);
+  if(ent){ ent.slots[0].location = d.location; ent.slots[0].startTime = d.start; ent.slots[0].endTime = d.end; }
+  else map.set(d.ds, { parentDuty: '', slots: [{ ...defaultSlotForDate(d.ds), location: d.location, startTime: d.start, endTime: d.end }] });
+  yr.off.delete(d.ds);
+  yr.day = null; renderYear();
+}
+function yrDayOff(){
+  const d = yr.day; const map = yr.months.get(d.ds.slice(0, 7));
+  map.delete(d.ds); yr.off.add(d.ds);
+  yr.day = null; renderYear();
+}
+function yrDayClear(){
+  yr.off.delete(yr.day.ds); yr.day = null; renderYear();
+}
+// 大会・行事
+let evDraft = { kind: '大会', title: '', date: '', endDate: '', place: '', memo: '' };
+function evSetKind(k){ evDraft.kind = k; renderYear(); }
+function yrAddEvent(){
+  const e = evDraft;
+  if(!e.title.trim() || !e.date){ alert('名前と日付を入れてください。'); return; }
+  if(e.endDate && e.endDate < e.date){ alert('終了日が開始日より前になっています。'); return; }
+  const ym = e.date.slice(0, 7);
+  if(!yr.events.has(ym)){ alert('登録できるのは、上で選んだ期間（12か月）の中の日付です。'); return; }
+  yr.events.get(ym).push({ date: e.date, endDate: e.endDate || '', kind: e.kind, title: e.title.trim(), place: e.place.trim(), memo: e.memo.trim() });
+  evDraft = { kind: e.kind, title: '', date: '', endDate: '', place: '', memo: '' };
+  renderYear();
+}
+function yrDelEvent(ym, i){
+  const ev = yr.events.get(ym)[i];
+  if(!confirm(`「${ev.title}」を削除しますか？`)) return;
+  yr.events.get(ym).splice(i, 1); renderYear();
+}
+async function yrSaveAll(){
+  const btn = document.getElementById('yrSaveBtn');
+  const todo = [];
+  yrMonths().forEach(ym => {
+    const arr = serializeMonth(yr.months.get(ym));
+    if(JSON.stringify(arr) !== yr.orig.get(ym)) todo.push({ ym, kind: 'dates', arr });
+    const evs = yr.events.get(ym);
+    if(JSON.stringify(evs) !== yr.origEv.get(ym)) todo.push({ ym, kind: 'events', evs });
+  });
+  if(!todo.length){ alert('変更はありません。'); return; }
+  btn.disabled = true; btn.textContent = '保存中…';
+  try{
+    for(const t of todo){
+      const r = t.kind === 'dates'
+        ? await apiPost({ action: 'savePracticeDates', month: t.ym, dates: t.arr })
+        : await apiPost({ action: 'saveEvents', month: t.ym, events: t.evs });
+      if(!r || !r.ok) throw new Error('save failed');
+      if(t.kind === 'dates') yr.orig.set(t.ym, JSON.stringify(t.arr)); else yr.origEv.set(t.ym, JSON.stringify(t.evs));
+    }
+    alert('12か月分を保存しました。');
+    document.getElementById('yearOverlay').style.display = 'none';
+    document.body.style.overflow = '';
+    yr = null;
+    loadPracticeDates();
+  }catch(e){
+    console.error(e);
+    alert('保存に失敗しました。通信状況を確認してもう一度お試しください。\n（大会・行事の保存は、Firebaseのルール更新が必要です）');
+    btn.disabled = false; btn.textContent = '12か月分を保存';
+  }
+}
+function yrMiniMonth(ym){
+  const [y, m] = ym.split('-').map(Number);
+  const map = yr.months.get(ym) || new Map();
+  const evs = yr.events.get(ym) || [];
+  const evDays = eventDaysSet(evs);
+  let h = WD.map((w, i) => `<div class="yr-wd ${i === 0 ? 'sun' : i === 6 ? 'sat' : ''}">${w}</div>`).join('');
+  for(let i = 0; i < firstWeekday(ym); i++) h += '<div></div>';
+  const used = new Set();
+  for(let d = 1; d <= daysInMonth(ym); d++){
+    const ds = dateStr(ym, d);
+    const ent = map.get(ds);
+    let style = '', cls = 'yr-d';
+    if(ent){
+      const loc = ent.slots[0].location;
+      used.add(loc);
+      style = `background:${LOC_COLORS_PNG[loc] || '#57534E'};color:#fff;`;
+    } else if(yr.off.has(ds)) cls += ' off';
+    else if(holidayNameFor(ds)) cls += ' hol';
+    if(evDays.has(ds)) cls += ' ev';
+    h += `<div class="${cls}" style="${style}" onclick="yrDayTap('${ds}')">${d}</div>`;
+  }
+  const evHtml = evs.slice().sort((a,b) => a.date.localeCompare(b.date)).map(e => `<div class="yr-ev">🚩 ${escapeHtml(md(e.date))} ${escapeHtml(e.title)}</div>`).join('');
+  const cnt = map.size;
+  return `<div class="yr-month"><div class="yr-mh">${y !== Number(yr.startYm.slice(0,4)) || m === 1 ? `${y}年` : ''}${m}月<span>${cnt}日</span></div><div class="yr-grid">${h}</div>${evHtml}</div>`;
+}
+function renderYear(){
+  const ov = document.getElementById('yearBody');
+  if(!ov || !yr) return;
+  const scroll = document.getElementById('yearOverlay').scrollTop;
+  const locs = ORG.locations.filter(l => l !== ORG.customLoc);
+  const blocksHtml = yr.blocks.map((b, i) => `
+    <div class="yr-block">
+      <div class="yr-block-h">型 ${i + 1}<button type="button" class="yr-x" onclick="yrDelBlock(${i})">削除</button></div>
+      <div>${[1,2,3,4,5,6,0].map(w => yrChip(WD[w], b.wd.has(w), 'yrBlockToggle', `${i},'wd',${w}`)).join('')}</div>
+      <div>${locs.map(l => yrChip(l, b.location === l, 'yrBlockToggle', `${i},'loc','${l}'`)).join('')}</div>
+      <div class="tpl-times"><input type="time" value="${b.start}" oninput="yr.blocks[${i}].start=this.value"> 〜 <input type="time" value="${b.end}" oninput="yr.blocks[${i}].end=this.value"></div>
+      ${ORG.categories.filter(c => c !== 'カスタム').length ? `<div class="tpl-label">参加区分（任意）</div><div>${ORG.categories.filter(c => c !== 'カスタム').map(c => yrChip(c, b.cats.has(c), 'yrBlockToggle', `${i},'cat','${c}'`)).join('')}</div>` : ''}
+      ${ORG.coaches.filter(c => c !== 'カスタム').length ? `<div class="tpl-label">責任者（任意）</div><div>${ORG.coaches.filter(c => c !== 'カスタム').map(c => yrChip(c, b.coaches.has(c), 'yrBlockToggle', `${i},'coach','${c}'`)).join('')}</div>` : ''}
+    </div>`).join('');
+  const breaksHtml = yr.breaks.map((b, i) => `
+    <div class="yr-break"><input type="date" value="${b.from}" onchange="yr.breaks[${i}].from=this.value;if(!yr.breaks[${i}].to){yr.breaks[${i}].to=this.value}"> 〜 <input type="date" value="${b.to}" onchange="yr.breaks[${i}].to=this.value">
+    <input type="text" placeholder="名前（年末年始など）" value="${escapeHtml(b.label)}" oninput="yr.breaks[${i}].label=this.value" maxlength="20"><button type="button" class="yr-x" onclick="yrDelBreak(${i})">削除</button></div>`).join('');
+  const calHtml = yr.loading ? '<div class="mc-hint">読み込み中…</div>' : `<div class="yr-months">${yrMonths().map(yrMiniMonth).join('')}</div>`;
+  const usedLocs = new Set(); if(!yr.loading) yr.months.forEach(mp => mp.forEach(e => usedLocs.add(e.slots[0].location)));
+  const legend = Array.from(usedLocs).filter(Boolean).map(l => `<span class="loc-badge" data-loc="${escapeHtml(l)}">${escapeHtml(l)}</span>`).join('') + '<span class="yr-lg off">休み</span><span class="yr-lg ev">大会・行事</span>';
+  let dayHtml = '';
+  if(yr.day){
+    const d = yr.day; const has = yr.months.get(d.ds.slice(0,7)).has(d.ds); const isOff = yr.off.has(d.ds);
+    const hn = holidayNameFor(d.ds);
+    dayHtml = `<div class="yr-daysheet"><div class="yr-block-h">${md(d.ds)}（${weekdayOf(d.ds)}）${hn ? ' ' + escapeHtml(hn) : ''}</div>
+      <div>${locs.map(l => yrChip(l, d.location === l, 'yrDayLoc', `'${l}'`)).join('')}</div>
+      <div class="tpl-times"><input type="time" value="${d.start}" oninput="yr.day.start=this.value"> 〜 <input type="time" value="${d.end}" oninput="yr.day.end=this.value"></div>
+      <div class="mc-actions"><button type="button" class="tpl-apply" onclick="yrDayApply()">${has ? '変更する' : '練習を追加'}</button>
+      ${has ? '<button type="button" class="yr-off-btn" onclick="yrDayOff()">休みにする</button>' : (isOff ? '<button type="button" class="yr-off-btn" onclick="yrDayClear()">休みを解除</button>' : '')}
+      <button type="button" class="mc-close-btn" onclick="yrDayClose()">戻る</button></div></div>`;
+  }
+  const allEv = [];
+  if(!yr.loading) yrMonths().forEach(ym => (yr.events.get(ym) || []).forEach((e, i) => allEv.push({ ym, i, e })));
+  allEv.sort((a, b) => a.e.date.localeCompare(b.e.date));
+  const evList = allEv.map(({ ym, i, e }) => `<div class="ev-row">${eventLineHtml(e)}<button type="button" class="yr-x" onclick="yrDelEvent('${ym}',${i})">削除</button></div>`).join('') || '<div class="mc-hint">まだ登録がありません。</div>';
+  const kindChips = EV_KINDS.map(k => `<span class="tpl-chip ${evDraft.kind === k ? 'on' : ''}" onclick="evSetKind('${k}')">${k}</span>`).join('');
+  const [sy] = yr.startYm.split('-');
+  ov.innerHTML = `
+    <div class="yr-sec"><div class="tpl-title">① 期間</div>
+      <div class="yr-row"><select id="yrKind" onchange="yrSetPeriod()"><option value="fy" ${yr.kind === 'fy' ? 'selected' : ''}>年度（4月〜翌3月）</option><option value="cy" ${yr.kind === 'cy' ? 'selected' : ''}>暦年（1月〜12月）</option></select>
+      <input type="number" id="yrYear" value="${yr.year}" min="2024" max="2100" onchange="yrSetPeriod()" style="width:90px"> 年</div></div>
+    <div class="yr-sec"><div class="tpl-title">② 曜日の型（複数OK）</div>${blocksHtml}
+      <button type="button" class="yr-add" onclick="yrAddBlock()">＋ 型を追加（例：日曜は別会場）</button>
+      <label class="yr-check"><input type="checkbox" ${yr.skipHol ? 'checked' : ''} onchange="yr.skipHol=this.checked"> 祝日は練習日にしない</label></div>
+    <div class="yr-sec"><div class="tpl-title">③ 休み期間</div>${breaksHtml}
+      <button type="button" class="yr-add" onclick="yrAddBreak()">＋ 休み期間を追加（年末年始・お盆など）</button></div>
+    <div class="mc-actions"><button type="button" class="tpl-apply" onclick="yrApplyBlocks()" ${yr.loading ? 'disabled' : ''}>型を12か月に反映</button><button type="button" class="tpl-copy" onclick="yrCopyLastYear()" ${yr.loading ? 'disabled' : ''}>去年をコピー</button></div>
+    <div class="mc-hint">登録済みの日・過去の日は変更しません。</div>
+    <div class="yr-sec"><div class="tpl-title">④ 年間カレンダー（日付をタップで変更）</div><div class="mc-legend">${legend}</div>${dayHtml}${calHtml}</div>
+    <div class="yr-sec"><div class="tpl-title">⑤ 大会・合宿・行事</div>
+      <div>${kindChips}</div>
+      <input type="text" placeholder="名前（例：春季大会）" value="${escapeHtml(evDraft.title)}" oninput="evDraft.title=this.value" maxlength="30">
+      <div class="yr-row"><input type="date" value="${evDraft.date}" onchange="evDraft.date=this.value"> 〜 <input type="date" value="${evDraft.endDate}" onchange="evDraft.endDate=this.value"></div>
+      <div class="mc-hint" style="margin-top:0">1日だけなら右側（終了日）は空でOK</div>
+      <input type="text" placeholder="場所（任意）" value="${escapeHtml(evDraft.place)}" oninput="evDraft.place=this.value" maxlength="30">
+      <input type="text" placeholder="メモ（任意）" value="${escapeHtml(evDraft.memo)}" oninput="evDraft.memo=this.value" maxlength="60">
+      <button type="button" class="yr-add" onclick="yrAddEvent()">＋ 追加</button>
+      <div style="margin-top:10px">${evList}</div></div>
+    <div class="mc-actions"><button type="button" class="save-btn" id="yrSaveBtn" style="margin-top:0" onclick="yrSaveAll()" ${yr.loading ? 'disabled' : ''}>12か月分を保存</button><button type="button" class="mc-close-btn" onclick="closeYearEditor()">閉じる</button></div>`;
+  document.getElementById('yearOverlay').scrollTop = scroll;
 }
 
 function addChild(prefillName){
@@ -2137,6 +2534,7 @@ function renderOrgTabs(){
 function applyOrg(id){
   const o = ORGS[id];
   if(!o) return;
+  monthEvents = []; yr = null;
   ORG = o;
   LOCATIONS = o.locations; CUSTOM_LOC = o.customLoc; CATEGORIES = o.categories; COACHES = o.coaches;
   SCHOOL_NOTES = o.schoolNotes; MAX_SLOTS = o.maxSlots;
