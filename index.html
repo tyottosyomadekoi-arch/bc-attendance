@@ -388,6 +388,12 @@
   .yr-savebar.dirty{border-top-color:#DC2626;background:#FEF2F2;}
   .yr-dirty{font-size:12px;font-weight:800;color:var(--muted);text-align:center;}
   .yr-savebar.dirty .yr-dirty{color:#DC2626;}
+  .mc-others{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:6px 0 8px;}
+  .mc-others-label{font-size:11.5px;color:var(--muted);font-weight:700;}
+  .mc-ochip{display:inline-block;border:2px solid var(--oc);color:var(--oc);background:#fff;border-radius:16px;padding:4px 12px;font-size:12.5px;font-weight:800;cursor:pointer;touch-action:manipulation;}
+  .mc-ochip.on{background:var(--oc);color:#fff;}
+  .mc-other{font-size:8.5px;line-height:1.2;text-align:left;border-left:3px solid;border-radius:3px;padding:1px 2px;margin-top:2px;word-break:break-all;}
+  .mc-otag{display:inline-block;color:#fff;font-size:10px;font-weight:800;border-radius:8px;padding:1px 7px;margin-right:4px;}
 </style>
 </head>
 <body>
@@ -420,6 +426,7 @@
       <div class="mc-title" id="mcTitle"></div>
       <button type="button" class="mc-nav" onclick="shiftMonthView(1)" aria-label="次の月">›</button>
     </div>
+    <div class="mc-others" id="mcOthers"></div>
     <div class="mc-grid" id="mcGrid"></div>
     <div class="mc-legend" id="mcLegend"></div>
     <div id="mcEvents" style="margin-top:8px;"></div>
@@ -1193,6 +1200,29 @@ function coachShort(slot){
   if(list.length === 0) return '';
   return list.length > 1 ? `${list[0]}ほか` : list[0];
 }
+const ORG_ABBR = { bc: 'BC', tsururoku: '鶴六', skh: 'SKH' };
+let mcOthers = new Set();
+const mcOtherData = {};
+function mcOtherKey(id, ym){ return id + ':' + ym; }
+async function loadMcOther(id, ym){
+  const key = mcOtherKey(id, ym);
+  if(mcOtherData[key]) return;
+  mcOtherData[key] = { loading: true, map: {}, events: [] };
+  try{
+    const r = await apiGet('getPracticeDates', { month: ym, org: id });
+    const map = {};
+    normalizePracticeDates(r.dates).forEach(pd => { map[pd.date] = pd; });
+    mcOtherData[key] = { loading: false, map, events: normalizeEvents(r.events) };
+  }catch(e){
+    console.error(e);
+    delete mcOtherData[key];
+  }
+  renderMonthCal();
+}
+function toggleMcOther(id){
+  mcOthers.has(id) ? mcOthers.delete(id) : mcOthers.add(id);
+  renderMonthCal();
+}
 function renderMonthCal(){
   const grid = document.getElementById('mcGrid');
   if(!grid) return;
@@ -1207,6 +1237,13 @@ function renderMonthCal(){
   const offset = firstWeekday(ym);
   for(let i = 0; i < offset; i++) html += '<div class="mc-cell"></div>';
   const used = new Set();
+  mcOthers.delete(ORG.id);
+  const otherIds = ORG_ORDER.filter(id => id !== ORG.id);
+  document.getElementById('mcOthers').innerHTML = '<span class="mc-others-label">他団体を重ねる：</span>' + otherIds.map(id => {
+    const on = mcOthers.has(id), c = ORGS[id].theme.navy;
+    return `<span class="mc-ochip ${on ? 'on' : ''}" style="--oc:${c}" onclick="toggleMcOther('${id}')">${escapeHtml(ORG_ABBR[id] || ORGS[id].tab)}</span>`;
+  }).join('');
+  mcOthers.forEach(id => { if(!mcOtherData[mcOtherKey(id, ym)]) loadMcOther(id, ym); });
   const evDaySet = eventDaysSet(monthEvents);
   const total = daysInMonth(ym);
   for(let d = 1; d <= total; d++){
@@ -1227,6 +1264,22 @@ function renderMonthCal(){
       });
       if(pd.slots.length > 1) body += `<div class="mc-more">他${pd.slots.length - 1}会場</div>`;
     }
+    mcOthers.forEach(id => {
+      const od = mcOtherData[mcOtherKey(id, ym)];
+      const c = ORGS[id].theme.navy;
+      (od ? od.events : []).forEach(ev => {
+        if(ds >= ev.date && ds <= (ev.endDate && ev.endDate >= ev.date ? ev.endDate : ev.date)){
+          body += `<div class="mc-other" style="border-left-color:${c};background:${c}33;color:${c}">🚩<b>${escapeHtml(ORG_ABBR[id] || '')}</b> ${escapeHtml(ev.title)}</div>`;
+        }
+      });
+      const opd = od && od.map[ds];
+      if(!opd) return;
+      opd.slots.forEach(sl => {
+        const label = (sl.customLocation && sl.location === ORGS[id].customLoc) ? sl.customLocation : sl.location;
+        const t = shortTimeRange(sl);
+        body += `<div class="mc-other" style="border-left-color:${c};background:${c}1A;color:${c}"><b>${escapeHtml(ORG_ABBR[id] || '')}</b> ${escapeHtml(label || '')}<br>${escapeHtml(t)}</div>`;
+      });
+    });
     if(evDaySet.has(ds)){
       cls.push('evd');
       const names = monthEvents.filter(ev => ds >= ev.date && ds <= (ev.endDate && ev.endDate >= ev.date ? ev.endDate : ev.date)).map(ev => escapeHtml(ev.title));
@@ -1238,7 +1291,13 @@ function renderMonthCal(){
   }
   grid.innerHTML = html;
   document.getElementById('mcLegend').innerHTML = Array.from(used).map(l => `<span class="loc-badge" data-loc="${escapeHtml(l)}">${escapeHtml(l)}</span>`).join('');
-  document.getElementById('mcEvents').innerHTML = monthEvents.length ? monthEvents.slice().sort((a,b) => a.date.localeCompare(b.date)).map(eventLineHtml).join('') : '';
+  const evRows = monthEvents.map(ev => ({ ev, tag: '' }));
+  mcOthers.forEach(id => {
+    const od = mcOtherData[mcOtherKey(id, ym)];
+    (od ? od.events : []).forEach(ev => evRows.push({ ev, tag: `<span class="mc-otag" style="background:${ORGS[id].theme.navy}">${escapeHtml(ORG_ABBR[id] || '')}</span>` }));
+  });
+  evRows.sort((a, b) => a.ev.date.localeCompare(b.ev.date));
+  document.getElementById('mcEvents').innerHTML = evRows.map(r => r.tag + eventLineHtml(r.ev)).join('');
 }
 function shiftMonthView(delta){
   const mi = document.getElementById('monthInput');
@@ -2559,7 +2618,7 @@ function renderOrgTabs(){
 function applyOrg(id){
   const o = ORGS[id];
   if(!o) return;
-  monthEvents = []; yr = null;
+  monthEvents = []; yr = null; mcOthers.delete(id);
   ORG = o;
   LOCATIONS = o.locations; CUSTOM_LOC = o.customLoc; CATEGORIES = o.categories; COACHES = o.coaches;
   SCHOOL_NOTES = o.schoolNotes; MAX_SLOTS = o.maxSlots;
