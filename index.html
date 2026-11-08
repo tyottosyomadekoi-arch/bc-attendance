@@ -384,6 +384,10 @@
   .yr-sec{scroll-margin-top:52px;border:2px solid var(--border);border-radius:14px;padding:0 12px 12px;margin-bottom:22px;overflow:hidden;}
   .yr-title{display:flex;align-items:center;gap:8px;background:var(--navy);color:#fff;font-size:15px;font-weight:800;margin:0 -12px 12px;padding:10px 12px;}
   .yr-num{display:inline-block;width:24px;height:24px;line-height:24px;text-align:center;border-radius:50%;background:#fff;color:var(--navy);font-size:14px;}
+  .yr-savebar{position:sticky;bottom:-12px;z-index:5;background:#fff;margin:0 -12px -12px;padding:8px 12px 12px;border-top:2px solid var(--border);}
+  .yr-savebar.dirty{border-top-color:#DC2626;background:#FEF2F2;}
+  .yr-dirty{font-size:12px;font-weight:800;color:var(--muted);text-align:center;}
+  .yr-savebar.dirty .yr-dirty{color:#DC2626;}
 </style>
 </head>
 <body>
@@ -1549,6 +1553,7 @@ function yrMiniMonth(ym){
   return `<div class="yr-month"><div class="yr-mh">${y !== Number(yr.startYm.slice(0,4)) || m === 1 ? `${y}年` : ''}${m}月<span>${cnt}日</span></div><div class="yr-grid">${h}</div>${evHtml}</div>`;
 }
 function yrJump(n){ const el = document.getElementById('ys' + n); if(el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+function yrRefreshDirty(){ const bar = document.querySelector('.yr-savebar'); if(!bar || !yr) return; const d = yrDirty(); bar.classList.toggle('dirty', d); const t = bar.querySelector('.yr-dirty'); if(t) t.textContent = d ? '● 保存していない変更があります' : '変更はありません'; }
 function renderYear(){
   const ov = document.getElementById('yearBody');
   if(!ov || !yr) return;
@@ -1608,7 +1613,7 @@ function renderYear(){
       <button type="button" class="yr-add" onclick="yrAddBreak()">＋ 休み期間を追加（年末年始・お盆など）</button></div>
     <div class="mc-actions"><button type="button" class="tpl-apply" onclick="yrApplyBlocks()" ${yr.loading ? 'disabled' : ''}>型を12か月に反映</button><button type="button" class="tpl-copy" onclick="yrCopyLastYear()" ${yr.loading ? 'disabled' : ''}>去年をコピー</button></div>
     <div class="mc-hint">登録済みの日・過去の日は変更しません。</div>
-    <div class="mc-actions"><button type="button" class="save-btn" id="yrSaveBtn" style="margin-top:0" onclick="yrSaveAll()" ${yr.loading ? 'disabled' : ''}>12か月分を保存</button><button type="button" class="mc-close-btn" onclick="closeYearEditor()">閉じる</button></div>`;
+    <div class="yr-savebar ${yrDirty() ? 'dirty' : ''}"><div class="yr-dirty">${yrDirty() ? '● 保存していない変更があります' : '変更はありません'}</div><div class="mc-actions" style="margin-top:6px"><button type="button" class="save-btn" id="yrSaveBtn" style="margin-top:0" onclick="yrSaveAll()" ${yr.loading ? 'disabled' : ''}>12か月分を保存</button><button type="button" class="mc-close-btn" onclick="closeYearEditor()">閉じる</button></div></div>`;
   document.getElementById('yearOverlay').scrollTop = scroll;
 }
 
