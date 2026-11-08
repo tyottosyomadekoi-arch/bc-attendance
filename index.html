@@ -394,6 +394,22 @@
   .mc-ochip.on{background:var(--oc);color:#fff;}
   .mc-other{font-size:8.5px;line-height:1.2;text-align:left;border-left:3px solid;border-radius:3px;padding:1px 2px;margin-top:2px;word-break:break-all;}
   .mc-otag{display:inline-block;color:#fff;font-size:10px;font-weight:800;border-radius:8px;padding:1px 7px;margin-right:4px;}
+  .admin-savebar{position:sticky;bottom:0;z-index:6;background:#fff;margin:10px -4px 0;padding:8px 4px 6px;border-top:2px solid var(--border);}
+  .admin-savebar.dirty{border-top-color:#DC2626;background:#FEF2F2;}
+  .admin-savebar.dirty .yr-dirty{color:#DC2626;}
+  .yr-dirty{font-size:12px;font-weight:800;color:var(--muted);text-align:center;}
+  .acc{border:2px solid var(--border);border-radius:14px;margin:10px 0;background:#fff;}
+  .acc.card-acc{margin:0 0 12px;}
+  .acc-h{border-radius:12px;display:flex;justify-content:space-between;align-items:center;background:var(--navy);color:#fff;font-size:14.5px;font-weight:800;padding:11px 14px;cursor:pointer;user-select:none;}
+  .acc-h em{font-style:normal;font-weight:600;font-size:12px;margin-left:6px;opacity:.9;}
+  .acc-h i{font-style:normal;transition:transform .2s;}
+  .acc-b{padding:12px 14px;display:none;}
+  .acc.open .acc-b{display:block;}
+  .acc.open>.acc-h{border-radius:12px 12px 0 0;}
+  .acc-n{display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;background:#fff;color:var(--navy);font-size:13px;margin-right:8px;}
+  .acc-h span{display:flex;align-items:center;}
+  .acc.open .acc-h i{transform:rotate(180deg);}
+  #announcementCard ul{margin:0 0 10px;padding-left:18px;}
 </style>
 </head>
 <body>
@@ -454,32 +470,54 @@
     </div>
     <div id="adminPanel" style="display:none;">
       <button type="button" class="year-btn" onclick="openYearEditor()">📅 年間でまとめて登録・大会や練習会・行事</button>
+      <div class="acc" id="accTpl">
+        <div class="acc-h" onclick="toggleAcc('accTpl')"><span><b class="acc-n">1</b>曜日の型・先月コピー</span><i>▾</i></div>
+        <div class="acc-b">
       <div class="tpl-box" id="tplBox"></div>
+        </div>
+      </div>
+      <div class="acc" id="accDays">
+        <div class="acc-h" onclick="toggleAcc('accDays')"><span><b class="acc-n">2</b>この月の練習日を設定</span><i>▾</i></div>
+        <div class="acc-b">
       <label class="field-label">練習日をタップして設定（コーチ用）</label>
       <div class="cal-grid" id="calGrid"></div>
       <div id="dateDetailList" style="margin-top:10px;"></div>
-      <button class="save-btn" onclick="savePracticeDates()">この月の練習日を保存</button>
+      <div class="admin-savebar" id="adminSavebar"><div class="yr-dirty" id="adminDirty">変更はありません</div><button class="save-btn" style="margin-top:6px" onclick="savePracticeDates()">この月の練習日を保存</button></div>
       <button class="clear-all-btn" onclick="clearAllPracticeDates()">この月の練習日をすべてクリア</button>
 
+        </div>
+      </div>
+      <div class="acc" id="accNotice">
+        <div class="acc-h" onclick="toggleAcc('accNotice')"><span><b class="acc-n">3</b>お知らせ（今月・来月）</span><i>▾</i></div>
+        <div class="acc-b">
+          <label class="field-label">今月のお知らせ（箇条書き）</label>
+          <textarea id="currentMonthSummaryInput" class="summary-textarea" placeholder="例：連絡事項を入れてください"></textarea>
+          <label class="field-label" style="margin-top:10px;">来月のお知らせ（箇条書き）</label>
+          <textarea id="nextMonthSummaryInput" class="summary-textarea" placeholder="例：連絡事項を入れてください"></textarea>
+          <button class="save-btn" onclick="saveMonthSummary()">お知らせを保存</button>
+        </div>
+      </div>
+      <!-- CSV書き出し：いったん非表示（使うときは hidden を外す） -->
+      <div id="csvBox" hidden>
       <label class="field-label" style="margin-top:16px;">出欠データの書き出し（コーチ用）</label>
       <button class="save-btn" onclick="downloadCSV()">この月の出欠をCSVでダウンロード</button>
       <button class="clear-all-btn" style="color:var(--navy);border-color:var(--navy);" onclick="copyCSV()">CSVをコピー（LINE内でダウンロードできない時）</button>
-
-      <label class="field-label" style="margin-top:16px;">今月のお知らせ（コーチ用・箇条書き）</label>
-      <textarea id="currentMonthSummaryInput" class="summary-textarea" placeholder="例：連絡事項を入れてください"></textarea>
-      <label class="field-label" style="margin-top:10px;">来月のお知らせ（コーチ用・箇条書き）</label>
-      <textarea id="nextMonthSummaryInput" class="summary-textarea" placeholder="例：連絡事項を入れてください"></textarea>
-      <button class="save-btn" onclick="saveMonthSummary()">サマリーを保存</button>
+      </div>
     </div>
   </div>
 
-  <div class="card" id="announcementCard" style="display:none;">
-    <h2>お知らせ</h2>
-    <div id="currentMonthSummaryDisplay"></div>
-    <div id="nextMonthSummaryDisplay"></div>
+  <div class="acc card-acc" id="accAnnounce" style="display:none;">
+    <div class="acc-h" onclick="toggleAcc('accAnnounce')"><span>📢 お知らせ<em id="accAnnounceCount"></em></span><i>▾</i></div>
+    <div class="acc-b" id="announcementCard">
+      <div id="currentMonthSummaryDisplay"></div>
+      <div id="nextMonthSummaryDisplay"></div>
+    </div>
   </div>
 
-  <div class="card" id="eventsCard" style="display:none;"></div>
+  <div class="acc card-acc" id="accEvents" style="display:none;">
+    <div class="acc-h" onclick="toggleAcc('accEvents')"><span>🚩 今月の大会・練習会・行事<em id="accEventsCount"></em></span><i>▾</i></div>
+    <div class="acc-b" id="eventsCard"></div>
+  </div>
 
   <div id="childrenContainer"></div>
   <button class="add-child-btn" onclick="addChild()">＋ お子様を追加（兄弟対応）</button>
@@ -1287,7 +1325,7 @@ function renderMonthCal(){
     }
     if(ds === today) cls.push('today');
     if(ds < today) cls.push('past');
-    html += `<div class="${cls.join(' ')}" ${pd ? `onclick="jumpToDate('${ds}')"` : ''}><div class="mc-day">${d}</div>${body}</div>`;
+    html += `<div class="${cls.join(' ')}" onclick="jumpToDate('${ds}')"><div class="mc-day">${d}</div>${body}</div>`;
   }
   grid.innerHTML = html;
   document.getElementById('mcLegend').innerHTML = Array.from(used).map(l => `<span class="loc-badge" data-loc="${escapeHtml(l)}">${escapeHtml(l)}</span>`).join('');
@@ -1315,10 +1353,25 @@ function closeCalOverlay(){
   document.getElementById('calOverlay').style.display = 'none';
   document.body.style.overflow = '';
 }
+function mcNotice(msg){
+  const h = document.querySelector('#calOverlay .mc-hint');
+  if(!h) return;
+  if(!h.dataset.orig) h.dataset.orig = h.textContent;
+  h.textContent = msg; h.style.color = '#B03A2E'; h.style.fontWeight = '800';
+  clearTimeout(mcNotice.t);
+  mcNotice.t = setTimeout(() => { h.textContent = h.dataset.orig; h.style.color = ''; h.style.fontWeight = ''; }, 3500);
+}
 function jumpToDate(ds){
-  closeCalOverlay();
+  const has = practiceDates.some(pd => pd.date === ds);
   const row = document.querySelector(`.child-block .date-row[data-date="${ds}"]`);
-  if(!row){ return; }
+  if(!row){
+    if(!has) mcNotice('この日は練習日ではありません。');
+    else if(ds < getTodayStr()) mcNotice('過ぎた日の出欠は、ここでは入力できません。');
+    else if(!document.querySelector('.child-block')) mcNotice('先に、お子様の名前を入力してください。');
+    else mcNotice('この日の入力欄が見つかりません。画面を開き直してください。');
+    return;
+  }
+  closeCalOverlay();
   row.scrollIntoView({ behavior: 'smooth', block: 'center' });
   row.classList.remove('flash'); void row.offsetWidth; row.classList.add('flash');
 }
@@ -1354,11 +1407,13 @@ function eventLineHtml(ev){
 }
 function renderEventsCard(){
   const card = document.getElementById('eventsCard');
-  if(!card) return;
+  const wrap = document.getElementById('accEvents');
+  if(!card || !wrap) return;
   const list = monthEvents.slice().sort((a,b) => a.date.localeCompare(b.date));
-  if(list.length === 0){ card.style.display = 'none'; return; }
-  card.style.display = 'block';
-  card.innerHTML = `<h2>今月の大会・練習会・行事</h2>${list.map(eventLineHtml).join('')}<div class="ev-note">※出欠の入力は不要です（練習日の出欠のみ入力してください）。</div>`;
+  if(list.length === 0){ wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  document.getElementById('accEventsCount').textContent = `（${list.length}件）`;
+  card.innerHTML = `${list.map(eventLineHtml).join('')}<div class="ev-note">※出欠の入力は不要です（練習日の出欠のみ入力してください）。</div>`;
 }
 
 function fiscalStartYm(kind, year){ return kind === 'fy' ? `${year}-04` : `${year}-01`; }
@@ -1675,6 +1730,39 @@ function renderYear(){
     <div class="yr-savebar ${yrDirty() ? 'dirty' : ''}"><div class="yr-dirty">${yrDirty() ? '● 保存していない変更があります' : '変更はありません'}</div><div class="mc-actions" style="margin-top:6px"><button type="button" class="save-btn" id="yrSaveBtn" style="margin-top:0" onclick="yrSaveAll()" ${yr.loading ? 'disabled' : ''}>12か月分を保存</button><button type="button" class="mc-close-btn" onclick="closeYearEditor()">閉じる</button></div></div>`;
   document.getElementById('yearOverlay').scrollTop = scroll;
 }
+
+
+function adminIsDirty(){
+  try{
+    const orig = new Map(practiceDates.map(pd => [pd.date, cloneEntry(pd)]));
+    return JSON.stringify(serializeMonth(orig)) !== JSON.stringify(serializeMonth(adminSelection));
+  }catch(e){ return false; }
+}
+setInterval(() => {
+  const panel = document.getElementById('adminPanel');
+  if(!panel || panel.style.display === 'none') return;
+  const d = adminIsDirty();
+  const bar = document.getElementById('adminSavebar'), t = document.getElementById('adminDirty');
+  if(!bar || !t) return;
+  bar.classList.toggle('dirty', d);
+  t.textContent = d ? '● 保存していない変更があります' : '変更はありません';
+}, 600);
+
+
+function accKey(id){ return 'acc_' + id; }
+function toggleAcc(id){
+  const el = document.getElementById(id); if(!el) return;
+  el.classList.toggle('open');
+  try{ localStorage.setItem(accKey(id), el.classList.contains('open') ? '1' : '0'); }catch(e){}
+}
+function initAcc(){
+  ['accNotice','accTpl','accDays','accAnnounce','accEvents'].forEach(id => {
+    let v = null; try{ v = localStorage.getItem(accKey(id)); }catch(e){}
+    const el = document.getElementById(id);
+    if(el && (v === '1' || (v === null && id === 'accDays'))) el.classList.add('open');
+  });
+}
+initAcc();
 
 function addChild(prefillName){
   childCounter++;
@@ -2479,7 +2567,7 @@ async function loadMonthSummaryDisplay(){
     const r = await apiGet('getMonthSummary', { month: ym });
     const current = (r.currentSummary || '').trim();
     const next = (r.nextSummary || '').trim();
-    const card = document.getElementById('announcementCard');
+    const card = document.getElementById('accAnnounce');
     const curEl = document.getElementById('currentMonthSummaryDisplay');
     const nextEl = document.getElementById('nextMonthSummaryDisplay');
     if(!current && !next){
@@ -2489,6 +2577,8 @@ async function loadMonthSummaryDisplay(){
       return;
     }
     card.style.display = 'block';
+    const nl = t => t.split(/\r?\n/).filter(x => x.trim()).length;
+    document.getElementById('accAnnounceCount').textContent = `（${nl(current) + nl(next)}件）`;
     curEl.innerHTML = current ? `<div class="announce-label">今月のお知らせ</div><ul>${bulletize(current)}</ul>` : '';
     nextEl.innerHTML = next ? `<div class="announce-label">来月のお知らせ</div><ul>${bulletize(next)}</ul>` : '';
   }catch(e){
@@ -2636,7 +2726,7 @@ function applyOrg(id){
   document.getElementById('adminPanel').style.display = 'none';
   document.getElementById('statusMsg').textContent = '';
   document.getElementById('summaryContainer').innerHTML = '<div class="empty">読み込み中…</div>';
-  document.getElementById('announcementCard').style.display = 'none';
+  document.getElementById('accAnnounce').style.display = 'none';
   invalidateAttendanceListCache();
 }
 function switchOrg(id){
