@@ -1507,7 +1507,7 @@ async function yrSaveAll(){
     loadPracticeDates();
   }catch(e){
     console.error(e);
-    alert('保存に失敗しました。通信状況を確認してもう一度お試しください。\n（大会・行事の保存は、Firebaseのルール更新が必要です）');
+    alert('保存に失敗しました。\n原因：' + ((e && (e.code || e.message)) || '不明') + '\n（permission-denied の場合は、Firebaseのルールの「公開」が必要です）');
     btn.disabled = false; btn.textContent = '12か月分を保存';
   }
 }
