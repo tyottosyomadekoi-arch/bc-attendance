@@ -406,10 +406,34 @@
   .acc-b{padding:12px 14px;display:none;}
   .acc.open .acc-b{display:block;}
   .acc.open>.acc-h{border-radius:12px 12px 0 0;}
+  .acc-link{cursor:pointer;}
+  .acc-link .acc-h i{transform:none !important;font-size:20px;}
   .acc-n{display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;background:#fff;color:var(--navy);font-size:13px;margin-right:8px;}
   .acc-h span{display:flex;align-items:center;}
   .acc.open .acc-h i{transform:rotate(180deg);}
   #announcementCard ul{margin:0 0 10px;padding-left:18px;}
+  /* 月カレンダーのコントラスト強化 */
+  .mc-loc[data-loc="六コミ"], #mcLegend .loc-badge[data-loc="六コミ"]{background:#2563EB !important;color:#fff !important;border-color:#2563EB !important;}
+  .mc-loc[data-loc="武道館"], #mcLegend .loc-badge[data-loc="武道館"]{background:#7C3AED !important;color:#fff !important;border-color:#7C3AED !important;}
+  .mc-loc[data-loc="宝田"], #mcLegend .loc-badge[data-loc="宝田"]{background:#0D9488 !important;color:#fff !important;border-color:#0D9488 !important;}
+  .mc-loc[data-loc="櫛スポ"], #mcLegend .loc-badge[data-loc="櫛スポ"]{background:#EA580C !important;color:#fff !important;border-color:#EA580C !important;}
+  .mc-loc[data-loc="羽黒体"], #mcLegend .loc-badge[data-loc="羽黒体"]{background:#16A34A !important;color:#fff !important;border-color:#16A34A !important;}
+  .mc-loc[data-loc="藤島体"], #mcLegend .loc-badge[data-loc="藤島体"]{background:#DB2777 !important;color:#fff !important;border-color:#DB2777 !important;}
+  .mc-loc[data-loc="アリーナ"], #mcLegend .loc-badge[data-loc="アリーナ"]{background:#4F46E5 !important;color:#fff !important;border-color:#4F46E5 !important;}
+  .mc-loc[data-loc="多目的"], #mcLegend .loc-badge[data-loc="多目的"]{background:#B45309 !important;color:#fff !important;border-color:#B45309 !important;}
+  .mc-loc[data-loc="カスタム"], #mcLegend .loc-badge[data-loc="カスタム"]{background:#57534E !important;color:#fff !important;border-color:#57534E !important;}
+  .mc-loc[data-loc="その他"], #mcLegend .loc-badge[data-loc="その他"]{background:#8B5A3C !important;color:#fff !important;border-color:#8B5A3C !important;}
+  .mc-cell.has{border:2px solid var(--navy);background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);}
+  .mc-cell.has .mc-day{font-size:13px;font-weight:900;}
+  .mc-cell:not(.has) .mc-day{opacity:.45;font-weight:600;}
+  .mc-cell:not(.has):not(.evd){background:transparent;}
+  .mc-time{color:var(--text) !important;font-weight:700;font-size:10px !important;}
+  .mc-coach{font-size:10px !important;font-weight:800;}
+  .mc-cell.past{opacity:.6;}
+  .mc-cell.evd{background:#FDE68A;border-color:#F59E0B;}
+  .mc-cell.evd.has{border-color:#F59E0B;}
+  .mc-ev{color:#92400E !important;}
+  .mc-grid{gap:4px;}
 </style>
 </head>
 <body>
@@ -469,7 +493,6 @@
       <input type="month" id="monthInput">
     </div>
     <div id="adminPanel" style="display:none;">
-      <button type="button" class="year-btn" onclick="openYearEditor()">📅 年間でまとめて登録・大会や練習会・行事</button>
       <div class="acc" id="accTpl">
         <div class="acc-h" onclick="toggleAcc('accTpl')"><span><b class="acc-n">1</b>曜日の型・先月コピー</span><i>▾</i></div>
         <div class="acc-b">
@@ -497,6 +520,8 @@
           <button class="save-btn" onclick="saveMonthSummary()">お知らせを保存</button>
         </div>
       </div>
+      <div class="acc acc-link" onclick="openYearEditor(2)"><div class="acc-h"><span><b class="acc-n">4</b>大会・練習会・行事</span><i>›</i></div></div>
+      <div class="acc acc-link" onclick="openYearEditor()"><div class="acc-h"><span><b class="acc-n">5</b>年間登録</span><i>›</i></div></div>
       <!-- CSV書き出し：いったん非表示（使うときは hidden を外す） -->
       <div id="csvBox" hidden>
       <label class="field-label" style="margin-top:16px;">出欠データの書き出し（コーチ用）</label>
@@ -1448,13 +1473,14 @@ function initialBlocks(){
 }
 function newBlock(){ return { wd: new Set(), location: '', start: '19:00', end: '21:00', cats: new Set(ORG.defaultCategories), coaches: new Set() }; }
 
-async function openYearEditor(){
+async function openYearEditor(jumpTo){
   const now = new Date();
   const fy = (now.getMonth() + 1) >= 4 ? now.getFullYear() : now.getFullYear() - 1;
   yr = { kind: 'fy', year: fy, startYm: fyStart(fy), blocks: initialBlocks(), skipHol: true, breaks: [], off: new Set(), months: new Map(), orig: new Map(), events: new Map(), origEv: new Map(), loading: true, day: null };
   document.getElementById('yearOverlay').style.display = 'block';
   document.body.style.overflow = 'hidden';
   renderYear();
+  if(jumpTo) setTimeout(() => yrJump(jumpTo), 50);
   await loadYearData();
 }
 function fyStart(y){ return `${y}-04`; }
