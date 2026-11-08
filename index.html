@@ -7,6 +7,12 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>練習出欠確認</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0F766E">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="出欠">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=2">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=2">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png?v=2">
@@ -267,6 +273,31 @@
   .empty{text-align:center;color:var(--muted);font-size:12.5px;padding:14px 0;}
   .liff-note{font-size:11px;color:var(--muted);text-align:center;padding-top:2px;}
 
+
+  /* --- 使いやすさ改善：大きい出席/欠席ボタン、日付カード、曜日の型 --- */
+  .date-row .date-label{font-size:20px;font-weight:800;margin-bottom:8px;}
+  .date-row .date-meta{font-size:15px;font-weight:700;color:var(--text);margin:0 0 10px;}
+  .date-row.next-row{border:2px solid var(--navy);border-radius:12px;padding:10px 10px;background:var(--light-blue);margin-bottom:8px;}
+  .chips-main{display:flex;gap:10px;}
+  .chips-main .chip{flex:1;text-align:center;height:52px;line-height:49px;padding:0;border-width:2px;border-radius:12px;font-size:16px;}
+  .chip.on[data-type="attend"]{background:var(--ok);color:#fff;border-color:var(--ok);}
+  .chip.on[data-type="absent"]{background:var(--absent);color:#fff;border-color:var(--absent);}
+  .more-toggle{display:block;text-align:right;font-size:12.5px;color:var(--muted);margin-top:6px;padding:6px 0;cursor:pointer;background:none;border:none;width:100%;touch-action:manipulation;}
+  .chips-more{display:none;gap:6px;flex-wrap:wrap;margin-top:4px;}
+  .chips-more.open{display:flex;}
+  .bulk-row{display:flex;justify-content:flex-end;margin:0 0 8px;}
+  .bulk-attend-btn{height:40px;padding:0 14px;border-radius:20px;border:1.5px solid var(--navy);background:#fff;color:var(--navy);font-weight:700;font-size:13px;cursor:pointer;touch-action:manipulation;}
+  .tpl-box{border:1.5px solid var(--border);border-radius:12px;padding:12px;margin:8px 0 12px;background:#fff;}
+  .tpl-box .tpl-title{font-size:13px;font-weight:800;color:var(--navy);margin-bottom:8px;}
+  .tpl-label{font-size:12px;color:var(--muted);margin:8px 0 6px;}
+  .tpl-chip{display:inline-block;min-width:40px;text-align:center;box-sizing:border-box;height:44px;line-height:40px;padding:0 12px;border-radius:22px;border:2px solid var(--border);background:#fff;color:var(--muted);font-size:14px;font-weight:700;margin:0 6px 8px 0;cursor:pointer;touch-action:manipulation;}
+  .tpl-chip.on{background:var(--navy);border-color:var(--navy);color:#fff;}
+  .tpl-times{display:flex;gap:8px;align-items:center;}
+  .tpl-times input[type=time]{flex:1;height:44px;font-size:16px;font-weight:700;text-align:center;}
+  .tpl-actions{display:flex;gap:10px;margin-top:6px;}
+  .tpl-actions button{flex:1;height:50px;border-radius:12px;font-size:14.5px;font-weight:800;cursor:pointer;touch-action:manipulation;}
+  .tpl-apply{border:none;background:var(--navy);color:#fff;}
+  .tpl-copy{border:2px solid var(--navy);background:#fff;color:var(--navy);}
   .org-tabs{display:flex;gap:6px;background:#fff;border:1px solid var(--border);border-radius:16px;padding:6px;margin-bottom:16px;box-shadow:0 2px 10px rgba(0,0,0,0.08);}
   .org-tab{flex:1;height:48px;border:none;border-radius:12px;background:transparent;color:var(--muted);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation;}
   .org-tab.on{background:var(--navy);color:#fff;}
@@ -319,6 +350,7 @@
       <input type="month" id="monthInput">
     </div>
     <div id="adminPanel" style="display:none;">
+      <div class="tpl-box" id="tplBox"></div>
       <label class="field-label">練習日をタップして設定（コーチ用）</label>
       <div class="cal-grid" id="calGrid"></div>
       <div id="dateDetailList" style="margin-top:10px;"></div>
@@ -661,10 +693,101 @@ async function toggleAdmin(){
     const allDatesInMonth = [];
     for(let d=1; d<=total; d++) allDatesInMonth.push(dateStr(ym, d));
     await ensureHolidaysLoaded(allDatesInMonth);
+    renderTplBox();
     renderCalGrid();
     renderDateDetailList();
     loadMonthSummaryIntoInputs();
   }
+}
+
+
+// ---- 曜日の型で一括登録 / 先月をコピー ----
+let tpl = null;
+function resetTpl(){
+  tpl = { wd: new Set(), location: '', start: '19:00', end: '21:00', cats: new Set(ORG.defaultCategories), coaches: new Set() };
+}
+function renderTplBox(){
+  const box = document.getElementById('tplBox');
+  if(!box) return;
+  if(!tpl) resetTpl();
+  const chip = (label, on, fn, arg) => `<span class="tpl-chip ${on ? 'on' : ''}" onclick="${fn}('${arg}')">${escapeHtml(label)}</span>`;
+  const wdHtml = [1,2,3,4,5,6,0].map(i => chip(WD[i], tpl.wd.has(i), 'tplToggleWd', i)).join('');
+  const locHtml = ORG.locations.filter(l => l !== ORG.customLoc).map(l => chip(l, tpl.location === l, 'tplSetLoc', l)).join('');
+  const catHtml = ORG.categories.filter(c => c !== 'カスタム').map(c => chip(c, tpl.cats.has(c), 'tplToggleCat', c)).join('');
+  const coachHtml = ORG.coaches.filter(c => c !== 'カスタム').map(c => chip(c, tpl.coaches.has(c), 'tplToggleCoach', c)).join('');
+  box.innerHTML = `
+    <div class="tpl-title">① 曜日の型で1か月分を一括登録</div>
+    <div class="tpl-label">練習する曜日</div><div>${wdHtml}</div>
+    <div class="tpl-label">会場</div><div>${locHtml}</div>
+    <div class="tpl-label">時間</div>
+    <div class="tpl-times"><input type="time" id="tplStart" value="${tpl.start}" oninput="tpl.start=this.value"> 〜 <input type="time" id="tplEnd" value="${tpl.end}" oninput="tpl.end=this.value"></div>
+    ${catHtml ? `<div class="tpl-label">参加区分</div><div>${catHtml}</div>` : ''}
+    ${coachHtml ? `<div class="tpl-label">責任者</div><div>${coachHtml}</div>` : ''}
+    <div class="tpl-actions">
+      <button type="button" class="tpl-apply" onclick="applyTpl()">この月に反映</button>
+      <button type="button" class="tpl-copy" onclick="copyLastMonth()">先月をコピー</button>
+    </div>
+    <div class="tpl-label" style="margin-bottom:0;">登録済みの日は変更しません。反映後、下のカレンダーで例外の日だけ直して「保存」を押してください。</div>`;
+}
+function tplToggleWd(i){ i = Number(i); tpl.wd.has(i) ? tpl.wd.delete(i) : tpl.wd.add(i); renderTplBox(); }
+function tplSetLoc(l){ tpl.location = (tpl.location === l ? '' : l); renderTplBox(); }
+function tplToggleCat(c){ tpl.cats.has(c) ? tpl.cats.delete(c) : tpl.cats.add(c); renderTplBox(); }
+function tplToggleCoach(c){ tpl.coaches.has(c) ? tpl.coaches.delete(c) : tpl.coaches.add(c); renderTplBox(); }
+function monthDays(ym){
+  const out = [];
+  const total = daysInMonth(ym);
+  for(let d = 1; d <= total; d++){
+    const ds = dateStr(ym, d);
+    out.push({ ds, wd: new Date(ds + 'T00:00:00').getDay() });
+  }
+  return out;
+}
+function applyTpl(){
+  const ym = document.getElementById('monthInput').value;
+  if(tpl.wd.size === 0){ alert('練習する曜日を選んでください。'); return; }
+  if(!tpl.location){ alert('会場を選んでください。'); return; }
+  const today = getTodayStr();
+  let added = 0;
+  monthDays(ym).forEach(({ ds, wd }) => {
+    if(!tpl.wd.has(wd) || ds < today || adminSelection.has(ds)) return;
+    adminSelection.set(ds, { parentDuty: '', slots: [{
+      ...defaultSlot(), location: tpl.location, startTime: tpl.start, endTime: tpl.end,
+      categories: Array.from(tpl.cats), coaches: Array.from(tpl.coaches)
+    }] });
+    added++;
+  });
+  renderCalGrid(); renderDateDetailList();
+  alert(added ? `${added}日分を追加しました。内容を確認して「この月の練習日を保存」を押してください。` : '追加できる日がありませんでした（登録済み、または過ぎた日です）。');
+}
+async function copyLastMonth(){
+  const ym = document.getElementById('monthInput').value;
+  const [y, m] = ym.split('-').map(Number);
+  const prev = new Date(y, m - 2, 1);
+  const prevYm = prev.getFullYear() + '-' + String(prev.getMonth() + 1).padStart(2, '0');
+  let prevDates = [];
+  try{
+    const r = await apiGet('getPracticeDates', { month: prevYm });
+    prevDates = normalizePracticeDates(r.dates);
+  }catch(e){ alert('先月の予定を読み込めませんでした。'); return; }
+  if(prevDates.length === 0){ alert('先月の練習日が登録されていません。'); return; }
+  // 曜日ごとに、先月いちばん後ろの日の内容を型として使う
+  const byWd = {};
+  prevDates.slice().sort((a, b) => a.date.localeCompare(b.date)).forEach(pd => {
+    byWd[new Date(pd.date + 'T00:00:00').getDay()] = pd;
+  });
+  const today = getTodayStr();
+  let added = 0;
+  monthDays(ym).forEach(({ ds, wd }) => {
+    const src = byWd[wd];
+    if(!src || ds < today || adminSelection.has(ds)) return;
+    adminSelection.set(ds, {
+      parentDuty: '',
+      slots: src.slots.map(sl => ({ ...sl, categories: [...(sl.categories || [])], coaches: [...(sl.coaches || [])], schoolNotes: [], message: '' }))
+    });
+    added++;
+  });
+  renderCalGrid(); renderDateDetailList();
+  alert(added ? `先月の曜日・会場・時間をもとに${added}日分を追加しました。確認して「この月の練習日を保存」を押してください。` : '追加できる日がありませんでした（登録済み、または過ぎた日です）。');
 }
 
 function renderCalGrid(){
@@ -964,6 +1087,7 @@ function addChild(prefillName){
       <button class="remove-child" onclick="removeChild('${id}')" style="margin-left:8px;">削除</button>
     </div>
     <div class="loadNote" style="font-size:11.5px;color:var(--muted);margin:-4px 0 6px;"></div>
+    <div class="bulk-row"><button type="button" class="bulk-attend-btn" onclick="markAllAttend('${id}')">全部出席にする（未選択の日）</button></div>
     <div class="datesList"></div>
     <button type="button" class="clear-child-btn" onclick="clearChildAttendance('${id}')">この月の回答をクリア</button>
   `;
@@ -1123,9 +1247,12 @@ function renderSlotAttendBlock(slot, idx, totalSlots){
     <div class="slot-attend-block slot-color-${idx}" data-slot-idx="${idx}" data-start="${slot.startTime || ''}" data-end="${slot.endTime || ''}">
       ${slotLabel}
       ${metaLine}${catLine}${coachLn}${schoolNoteBadges(slot)}${msgLine}
-      <div class="chips">
-        <div class="chip" data-type="attend" onclick="selectChip(this)">✓ 参加</div>
-        <div class="chip" data-type="absent" onclick="selectChip(this)">✕ 欠席</div>
+      <div class="chips-main">
+        <div class="chip" data-type="attend" onclick="selectChip(this)">出席</div>
+        <div class="chip" data-type="absent" onclick="selectChip(this)">欠席</div>
+      </div>
+      <button type="button" class="more-toggle" onclick="toggleMore(this)">遅刻・早退・その他 ›</button>
+      <div class="chips chips-more">
         <div class="chip" data-type="late" onclick="selectChip(this)">⏰ 遅刻</div>
         <div class="chip" data-type="early" onclick="selectChip(this)">↩ 早退</div>
         <div class="chip" data-type="other" onclick="selectChip(this)">💬 フリーメッセージ</div>
@@ -1161,7 +1288,7 @@ function renderDatesForChild(block){
     const slotsHtml = pd.slots.map((slot, idx) => renderSlotAttendBlock(slot, idx, pd.slots.length)).join('');
     const dutyLine = pd.parentDuty ? `<div class="duty-line">👪 当番: ${escapeHtml(pd.parentDuty)}</div>` : '';
     return `
-    <div class="date-row ${dayClassFor(ds)}" data-date="${ds}">
+    <div class="date-row ${dayClassFor(ds)}${ds === nextDate ? ' next-row' : ''}" data-date="${ds}">
       <div class="date-label">${dateLabelWithHoliday(ds)}${dateBadgeFor(ds, todayStr, nextDate)}</div>
       ${slotsHtml}
       ${dutyLine}
@@ -1210,6 +1337,21 @@ function selectChip(el){
       scope.querySelector(`.other-inline[data-type="other"]`).classList.add('show');
     }
   }
+  const more = scope.querySelector('.chips-more');
+  if(more && more.querySelector('.chip.on')) more.classList.add('open');
+}
+function toggleMore(btn){
+  const more = btn.parentElement.querySelector('.chips-more');
+  if(more) more.classList.toggle('open');
+}
+function markAllAttend(id){
+  const block = document.getElementById(id);
+  if(!block) return;
+  block.querySelectorAll('.slot-attend-block').forEach(sb => {
+    if(sb.querySelector('.chip.on')) return; // すでに選んだ日は変えない
+    const chip = sb.querySelector('.chip[data-type="attend"]');
+    if(chip) selectChip(chip);
+  });
 }
 
 async function submitAll(){
@@ -1879,6 +2021,7 @@ function applyOrg(id){
   document.getElementById('orgTitle').textContent = o.title;
   document.getElementById('orgFooter').textContent = o.footer;
   document.title = o.title;
+  tpl = null;
   renderOrgTabs();
   try{ localStorage.setItem('attendanceOrg', id); }catch(e){}
   practiceDates = [];
@@ -1911,7 +2054,12 @@ async function initLiff(){
       return;
     }
     await liff.init({ liffId: LIFF_ID });
-    if(!liff.isLoggedIn()){ liff.login(); return; }
+    if(!liff.isLoggedIn()){
+      // LINEアプリの外（ホーム画面から開いた場合など）はLINEログインへ飛ばさず、名前の自由入力で使う
+      if(liff.isInClient && liff.isInClient()){ liff.login(); return; }
+      greeting.textContent = 'お子様・コーチのお名前を入力してください';
+      return;
+    }
     const profile = await liff.getProfile();
     lineDisplayName = profile.displayName;
     greeting.textContent = `${profile.displayName} さん、こんにちは`;
