@@ -298,6 +298,27 @@
   .tpl-actions button{flex:1;height:50px;border-radius:12px;font-size:14.5px;font-weight:800;cursor:pointer;touch-action:manipulation;}
   .tpl-apply{border:none;background:var(--navy);color:#fff;}
   .tpl-copy{border:2px solid var(--navy);background:#fff;color:var(--navy);}
+  .mc-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+  .mc-title{font-size:17px;font-weight:800;color:var(--text);}
+  .mc-nav{width:44px;height:44px;border:none;background:none;font-size:24px;color:var(--navy);cursor:pointer;touch-action:manipulation;}
+  .mc-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;}
+  .mc-wd{text-align:center;font-size:11px;font-weight:700;color:var(--muted);padding:4px 0;}
+  .mc-wd.sun{color:#C0392B;} .mc-wd.sat{color:#1F5C99;}
+  .mc-cell{border:1px solid transparent;border-radius:8px;padding:3px 1px;min-height:70px;text-align:center;box-sizing:border-box;overflow:hidden;}
+  .mc-cell.has{background:#fff;border-color:var(--border);cursor:pointer;touch-action:manipulation;}
+  .mc-cell.today{border:2px solid var(--navy);background:var(--light-blue);}
+  .mc-cell.past{opacity:.55;}
+  .mc-day{font-size:12px;font-weight:800;color:var(--text);}
+  .mc-cell.day-sun .mc-day, .mc-cell.day-holiday .mc-day{color:#C0392B;}
+  .mc-cell.day-sat .mc-day{color:#1F5C99;}
+  .mc-loc{display:block !important;font-size:9.5px !important;padding:1px 0 !important;margin:3px 0 0 !important;border-radius:4px !important;white-space:nowrap;overflow:hidden;text-overflow:clip;}
+  .mc-time{font-size:9.5px;color:var(--muted);margin-top:1px;white-space:nowrap;}
+  .mc-coach{font-size:9.5px;font-weight:700;color:var(--text);margin-top:1px;white-space:nowrap;overflow:hidden;}
+  .mc-more{font-size:9px;color:var(--muted);margin-top:2px;}
+  .mc-legend{margin-top:10px;display:flex;flex-wrap:wrap;gap:4px 6px;}
+  .mc-hint{margin-top:8px;font-size:11.5px;color:var(--muted);}
+  .date-row.flash{animation:flashrow 1.2s ease;}
+  @keyframes flashrow{0%,60%{background:#FFF7E0;}100%{background:transparent;}}
   .org-tabs{display:flex;gap:6px;background:#fff;border:1px solid var(--border);border-radius:16px;padding:6px;margin-bottom:16px;box-shadow:0 2px 10px rgba(0,0,0,0.08);}
   .org-tab{flex:1;height:48px;border:none;border-radius:12px;background:transparent;color:var(--muted);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation;}
   .org-tab.on{background:var(--navy);color:#fff;}
@@ -373,6 +394,17 @@
     <h2>お知らせ</h2>
     <div id="currentMonthSummaryDisplay"></div>
     <div id="nextMonthSummaryDisplay"></div>
+  </div>
+
+  <div class="card" id="monthCalCard">
+    <div class="mc-head">
+      <button type="button" class="mc-nav" onclick="shiftMonthView(-1)" aria-label="前の月">‹</button>
+      <div class="mc-title" id="mcTitle"></div>
+      <button type="button" class="mc-nav" onclick="shiftMonthView(1)" aria-label="次の月">›</button>
+    </div>
+    <div class="mc-grid" id="mcGrid"></div>
+    <div class="mc-legend" id="mcLegend"></div>
+    <div class="mc-hint">日付をタップすると、その日の出欠入力に移ります。</div>
   </div>
 
   <div id="childrenContainer"></div>
@@ -994,6 +1026,7 @@ async function savePracticeDates(){
     }
     practiceDates = arr;
     document.getElementById('adminPanel').style.display = 'none';
+    renderMonthCal();
     renderChildren();
     loadSummary();
     alert(`${arr.length}件の練習日を保存しました。`);
@@ -1016,6 +1049,7 @@ async function clearAllPracticeDates(){
       return;
     }
     practiceDates = [];
+    renderMonthCal();
     renderChildren();
     loadSummary();
     alert('この月の練習日をすべて削除しました。');
@@ -1064,11 +1098,79 @@ async function loadPracticeDates(){
   if(dates.length > 0){
     await ensureHolidaysLoaded(dates.map(pd => pd.date));
   }
+  renderMonthCal();
   await liffReadyPromise; // LINEの表示名が分かってから子どもの欄を作る
   if(my !== loadSeq) return;
   renderChildren();
   loadSummary();
   loadMonthSummaryDisplay();
+}
+
+// ---- 月のカレンダー表示 ----
+function shortTimeRange(slot){
+  if(slot.allDay) return '終日';
+  const f = (t) => { if(!t) return ''; const [h, m] = t.split(':'); return m === '00' ? String(Number(h)) : `${Number(h)}:${m}`; };
+  if(slot.startTime && slot.endTime) return `${f(slot.startTime)}-${f(slot.endTime)}`;
+  if(slot.startTime) return `${f(slot.startTime)}〜`;
+  return '';
+}
+function coachShort(slot){
+  const list = (slot.coaches || []).map(c => (c === 'カスタム' && slot.customCoach) ? slot.customCoach : c).filter(Boolean);
+  if(list.length === 0) return '';
+  return list.length > 1 ? `${list[0]}ほか` : list[0];
+}
+function renderMonthCal(){
+  const grid = document.getElementById('mcGrid');
+  if(!grid) return;
+  const ym = document.getElementById('monthInput').value;
+  if(!ym) return;
+  const [y, m] = ym.split('-').map(Number);
+  document.getElementById('mcTitle').textContent = `${y}年${m}月の練習`;
+  const byDate = {};
+  practiceDates.forEach(pd => { byDate[pd.date] = pd; });
+  const today = getTodayStr();
+  let html = WD.map((w, i) => `<div class="mc-wd ${i === 0 ? 'sun' : i === 6 ? 'sat' : ''}">${w}</div>`).join('');
+  const offset = firstWeekday(ym);
+  for(let i = 0; i < offset; i++) html += '<div class="mc-cell"></div>';
+  const used = new Set();
+  const total = daysInMonth(ym);
+  for(let d = 1; d <= total; d++){
+    const ds = dateStr(ym, d);
+    const pd = byDate[ds];
+    const cls = ['mc-cell', dayClassFor(ds)];
+    let body = '';
+    if(pd){
+      cls.push('has');
+      pd.slots.forEach((sl, i) => {
+        if(sl.location) used.add(sl.location);
+        if(i === 0){
+          const label = (sl.location === CUSTOM_LOC && sl.customLocation) ? sl.customLocation : sl.location;
+          body += `<span class="loc-badge mc-loc" data-loc="${escapeHtml(sl.location || '')}">${escapeHtml(label || '')}</span>`;
+          const t = shortTimeRange(sl); if(t) body += `<div class="mc-time">${escapeHtml(t)}</div>`;
+          const c = coachShort(sl); if(c) body += `<div class="mc-coach">${escapeHtml(c)}</div>`;
+        }
+      });
+      if(pd.slots.length > 1) body += `<div class="mc-more">他${pd.slots.length - 1}会場</div>`;
+    }
+    if(ds === today) cls.push('today');
+    if(ds < today) cls.push('past');
+    html += `<div class="${cls.join(' ')}" ${pd ? `onclick="jumpToDate('${ds}')"` : ''}><div class="mc-day">${d}</div>${body}</div>`;
+  }
+  grid.innerHTML = html;
+  document.getElementById('mcLegend').innerHTML = Array.from(used).map(l => `<span class="loc-badge" data-loc="${escapeHtml(l)}">${escapeHtml(l)}</span>`).join('');
+}
+function shiftMonthView(delta){
+  const mi = document.getElementById('monthInput');
+  const [y, m] = mi.value.split('-').map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  mi.value = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  mi.dispatchEvent(new Event('change'));
+}
+function jumpToDate(ds){
+  const row = document.querySelector(`.child-block .date-row[data-date="${ds}"]`);
+  if(!row){ return; }
+  row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  row.classList.remove('flash'); void row.offsetWidth; row.classList.add('flash');
 }
 
 function addChild(prefillName){
