@@ -2070,7 +2070,7 @@ function ysPrint(){
   window.print();
 }
 function ysOpenBrowser(){
-  openExternal(location.origin + location.pathname + '?org=' + ORG.id + '&yearsheet=' + ys.fy + (ys.mode === 'one' ? '&ysmode=one' : ''));
+  openExternal(location.origin + location.pathname + '?org=' + ORG.id + '&v=' + Date.now() + '&yearsheet=' + ys.fy + (ys.mode === 'one' ? '&ysmode=one' : ''));
 }
 function renderYearSheet(){
   const body = document.getElementById('ysBody');
