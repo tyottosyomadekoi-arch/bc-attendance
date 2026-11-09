@@ -439,6 +439,39 @@
   .ac-row{display:flex;justify-content:space-between;align-items:center;gap:8px;border-bottom:1px solid var(--border);padding:8px 0;font-size:13px;}
   .ac-b{display:flex;gap:6px;flex-shrink:0;}
   .ac-b button{border:2px solid var(--navy);background:#fff;color:var(--navy);border-radius:8px;padding:6px 10px;font-size:12px;font-weight:800;cursor:pointer;}
+  .ys-ctl{margin-bottom:10px;}
+  .ys-seg{display:flex;gap:6px;margin-bottom:8px;}
+  .ys-seg button{flex:1;border:2px solid var(--navy);background:#fff;color:var(--navy);border-radius:10px;padding:9px;font-size:13px;font-weight:800;cursor:pointer;}
+  .ys-seg button.on{background:var(--navy);color:#fff;}
+  .ys-yearnav{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;font-size:13px;}
+  .ys-yearnav button{border:2px solid var(--border);background:#fff;border-radius:8px;width:40px;height:36px;font-size:18px;font-weight:800;color:var(--navy);cursor:pointer;}
+  #ysPaperWrap{width:794px;max-width:none;transform-origin:top left;overflow:hidden;}
+  .ys-paper{width:794px;height:1123px;background:#fff;padding:26px 30px 16px;box-sizing:border-box;position:relative;font-family:"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;color:#1F2937;border:1px solid #ddd;}
+  .ys-hd{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:4px solid #0F766E;padding-bottom:8px;}
+  .ys-hd h1{margin:0;font-size:28px;color:#0F766E;line-height:1.1;} .ys-hd h1 small{display:block;font-size:13px;color:#6B7280;font-weight:700;margin-bottom:2px;}
+  .ys-yr{font-size:32px;font-weight:900;color:#0F766E;}
+  .ys-lg3{display:grid;gap:2px;font-size:11.5px;margin:7px 0 3px;font-weight:600;} .ys-lg3 i{display:inline-block;width:24px;height:7px;border-radius:2px;vertical-align:2px;margin-right:6px;}
+  .ys-lg{display:flex;gap:4px 14px;flex-wrap:wrap;font-size:11px;margin:3px 0 8px;font-weight:700;align-items:center;} .ys-lg i{display:inline-block;width:13px;height:13px;border-radius:3px;vertical-align:-2px;margin-right:4px;} .ys-lg i.v{background:#FDE68A;box-shadow:0 0 0 2px #F59E0B inset;} .ys-lg .red{color:#DC2626;}
+  .ys-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px 11px;}
+  .ys-m{border:1.5px solid #CBD5E1;border-radius:8px;padding:5px 6px;min-height:206px;}
+  .ys-mh{display:flex;align-items:baseline;gap:5px;margin-bottom:2px;} .ys-mh small{font-size:11px;color:#6B7280;} .ys-mh b{font-size:19px;color:#0F766E;} .ys-mh span{margin-left:auto;font-size:11px;font-weight:800;color:#374151;}
+  .ys-g{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;text-align:center;}
+  .ys-wd{font-size:9.5px;color:#6B7280;} .ys-wd.s{color:#DC2626;} .ys-wd.b{color:#2563EB;}
+  .ys-d{font-size:12.5px;height:24px;border-radius:4px;font-weight:800;color:#374151;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+  .ys-d.three{justify-content:space-between;padding:1px 0 2px;} .ys-d span{line-height:15px;}
+  .ys-d.red{color:#DC2626;} .ys-d.blue{color:#2563EB;} .ys-d.on{color:#fff !important;}
+  .ys-d.ev{box-shadow:0 0 0 2.5px #F59E0B inset;} .ys-d.ev:not(.on){background:#FDE68A;}
+  .ys-bars{display:flex;gap:1px;width:80%;height:6px;} .ys-bars u{flex:1;display:block;border-radius:1px;background:#F3F5F7;}
+  .ys-e{font-size:11px;font-weight:800;color:#B45309;margin-top:3px;} .ys-e em{font-style:normal;color:#fff;font-size:9px;border-radius:6px;padding:0 5px;margin-left:4px;}
+  .ys-ft{position:absolute;left:30px;right:30px;bottom:12px;border-top:2px solid #E5E7EB;padding-top:5px;font-size:10.5px;color:#4B5563;display:flex;justify-content:space-between;gap:16px;}
+  @media print{
+    @page{size:A4 portrait;margin:0;}
+    body.printing-ys > *:not(#yearSheetOverlay){display:none !important;}
+    body.printing-ys #yearSheetOverlay{position:static !important;display:block !important;background:#fff !important;padding:0 !important;}
+    body.printing-ys #yearSheetOverlay .cal-sheet{box-shadow:none;padding:0;max-width:none;width:auto;border:none;}
+    body.printing-ys .ys-ctl,body.printing-ys .ys-top{display:none !important;}
+    body.printing-ys .ys-paper{border:none;margin:0;}
+  }
 </style>
 </head>
 <body>
@@ -478,21 +511,30 @@
     <div class="mc-hint">日付をタップすると、その日の出欠入力に移ります。</div>
     <div class="mc-actions">
       <button type="button" class="mc-add-btn" onclick="openAddCal()">📆 カレンダーに追加</button>
+      <button type="button" class="mc-add-btn" onclick="openYearSheet()">🖨 年間予定表</button>
       <button type="button" class="mc-close-btn" onclick="closeCalOverlay()">閉じる</button>
     </div>
+  </div>
+</div>
+
+<div id="yearSheetOverlay" class="cal-overlay" style="display:none;z-index:75;" onclick="if(event.target===this)closeYearSheet()">
+  <div class="cal-sheet" style="max-width:860px;">
+    <div class="mc-title ys-top" style="margin-bottom:6px;">🖨 年間予定表</div>
+    <div id="ysBody"></div>
+    <div class="mc-actions ys-top"><button type="button" class="mc-close-btn" onclick="closeYearSheet()">閉じる</button></div>
   </div>
 </div>
 
 <div id="addCalOverlay" class="cal-overlay" style="display:none;z-index:70;" onclick="if(event.target===this)closeAddCal()">
   <div class="cal-sheet">
     <div class="mc-title" style="margin-bottom:6px;">📆 カレンダーに追加</div>
-    <div class="mc-hint" style="margin-top:0">スマホの予定アプリに、練習日や大会を入れられます。今日以降の予定が対象です。</div>
+    <div class="mc-hint" style="margin-top:0">今月の練習日と大会・行事を、スマホのカレンダー（iPhoneの標準／Googleカレンダーなど）にまとめて追加できます。今日以降の予定が対象です。</div>
     <div id="addCalIcsBox">
       <button type="button" class="mc-add-btn wide" onclick="downloadICS()">この月の予定をまとめて追加（.ics）</button>
       <div class="mc-hint">iPhoneは「ファイル」に保存されたあと、開くと予定を追加できます。</div>
     </div>
     <div id="addCalBrowserBox" style="display:none;">
-      <div class="mc-hint">LINEの中では、Googleカレンダーのボタンが使えます。iPhoneの標準カレンダー等に入れたい時は、下のボタンでSafari/Chromeで開き直してください。</div>
+      <div class="mc-hint">LINEの中ではファイルを保存できないため、下のボタンでSafari/Chromeを開き直してください。開いた画面で「まとめて追加」を押すと、スマホのカレンダーに入ります。</div>
       <button type="button" class="mc-add-btn wide" onclick="openCalInBrowser()">🌐 外のブラウザで開く（まとめて追加）</button>
     </div>
     <div id="addCalList"></div>
@@ -1906,12 +1948,140 @@ function openAddCal(){
   document.querySelectorAll('#addCalList .ac-ics').forEach(b => b.style.display = line ? 'none' : '');
   document.getElementById('addCalList').innerHTML = items.length ? items.map((it, i) => {
     const t = it.allDay ? (it.endDate > it.date ? `${md(it.date)}〜${md(it.endDate)}` : md(it.date)) : `${md(it.date)} ${it.start}-${it.end}`;
-    return `<div class="ac-row"><div class="ac-t"><b>${escapeHtml(t)}（${weekdayOf(it.date)}）</b><br>${escapeHtml(it.title)}</div><div class="ac-b"><button type="button" onclick="addOneGoogle(${i})">Google</button><button type="button" class="ac-ics" onclick="addOneICS(${i})">標準</button></div></div>`;
+    return `<div class="ac-row"><div class="ac-t"><b>${escapeHtml(t)}（${weekdayOf(it.date)}）</b><br>${escapeHtml(it.title)}</div></div>`;
   }).join('') : '<div class="mc-hint">今日以降の練習日・行事がありません。</div>';
   document.getElementById('addCalOverlay').style.display = 'block';
   document.querySelectorAll('#addCalList .ac-ics').forEach(b => b.style.display = line ? 'none' : '');
 }
 function closeAddCal(){ document.getElementById('addCalOverlay').style.display = 'none'; }
+
+// ---- 年間予定表（印刷用） ----
+let ys = null;
+const YS_ORGC = { bc: '#0F766E', tsururoku: '#1F5C99', skh: '#C2410C' };
+function fyOf(date){ return (date.getMonth() + 1) >= 4 ? date.getFullYear() : date.getFullYear() - 1; }
+async function openYearSheet(fy){
+  ys = ys || { mode: 'all', fy: fy || fyOf(new Date()), data: null, loading: true };
+  if(fy) ys.fy = fy;
+  document.getElementById('yearSheetOverlay').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+  await loadYearSheet();
+}
+function closeYearSheet(){
+  document.getElementById('yearSheetOverlay').style.display = 'none';
+  document.body.style.overflow = '';
+}
+function ysMonths(){ return Array.from({ length: 12 }, (_, i) => { const m = 4 + i; return m <= 12 ? `${ys.fy}-${String(m).padStart(2,'0')}` : `${ys.fy + 1}-${String(m - 12).padStart(2,'0')}`; }); }
+async function loadYearSheet(){
+  ys.loading = true; renderYearSheet();
+  const fy = ys.fy;
+  const months = ysMonths();
+  const data = {};
+  await Promise.all(ORG_ORDER.map(async id => {
+    const results = await Promise.all(months.map(ym => apiGet('getPracticeDates', { month: ym, org: id }).catch(() => ({ dates: [], events: [] }))));
+    const map = {}; const events = [];
+    results.forEach(r => {
+      normalizePracticeDates(r.dates).forEach(pd => { map[pd.date] = pd; });
+      normalizeEvents(r.events).forEach(ev => events.push(ev));
+    });
+    data[id] = { map, events };
+  }));
+  await ensureHolidaysLoaded([`${months[0]}-01`, `${months[11]}-01`]);
+  if(!ys || ys.fy !== fy) return;
+  ys.data = data; ys.loading = false;
+  renderYearSheet();
+}
+function ysSetMode(m){ ys.mode = m; renderYearSheet(); }
+function ysShiftYear(d){ ys.fy += d; loadYearSheet(); }
+function ysSlotLoc(sl, orgId){ return (sl.location === ORGS[orgId].customLoc && sl.customLocation) ? sl.customLocation : (sl.location || ''); }
+function ysTypical(orgId){
+  const groups = {};
+  Object.values(ys.data[orgId].map).forEach(pd => {
+    const sl = pd.slots[0]; if(!sl) return;
+    const key = [ysSlotLoc(sl, orgId), sl.startTime || '', sl.endTime || ''].join('|');
+    const g = groups[key] = groups[key] || { loc: ysSlotLoc(sl, orgId), st: sl.startTime, en: sl.endTime, n: 0, wd: {} };
+    g.n++;
+    const w = new Date(pd.date + 'T00:00:00').getDay();
+    g.wd[w] = (g.wd[w] || 0) + 1;
+  });
+  return Object.values(groups).sort((a, b) => b.n - a.n).slice(0, 3).filter(g => g.n >= 3).map(g => {
+    const wds = [1,2,3,4,5,6,0].filter(w => (g.wd[w] || 0) >= Math.max(2, g.n * 0.2)).map(w => WD[w]).join('・');
+    const time = g.st && g.en ? `${g.st}〜${g.en}` : '終日';
+    return `${wds} ${time} ${g.loc}`.trim();
+  });
+}
+function ysMonthHtml(ym){
+  const [y, m] = ym.split('-').map(Number);
+  const one = ys.mode === 'one';
+  const orgIds = one ? [ORG.id] : ORG_ORDER;
+  const evAll = [];
+  orgIds.forEach(id => ys.data[id].events.forEach(ev => { if(ev.date.slice(0, 7) === ym) evAll.push({ ev, id }); }));
+  const evDays = new Set();
+  evAll.forEach(({ ev }) => eventDaysSet([ev]).forEach(d => evDays.add(d)));
+  let cells = WD.map((w, i) => `<div class="ys-wd ${i === 0 ? 's' : i === 6 ? 'b' : ''}">${w}</div>`).join('');
+  for(let i = 0; i < firstWeekday(ym); i++) cells += '<div></div>';
+  let cnt = 0;
+  for(let d = 1; d <= daysInMonth(ym); d++){
+    const ds = dateStr(ym, d);
+    const wd = new Date(ds + 'T00:00:00').getDay();
+    const has = orgIds.map(id => !!ys.data[id].map[ds]);
+    if(has.some(Boolean)) cnt++;
+    let cls = 'ys-d', style = '', inner = `<span>${d}</span>`;
+    if(holidayNameFor(ds) || wd === 0) cls += ' red'; else if(wd === 6) cls += ' blue';
+    if(one){
+      const pd = ys.data[ORG.id].map[ds];
+      if(pd){ style = `background:${LOC_COLORS_PNG[pd.slots[0].location] || '#57534E'};color:#fff;`; cls += ' on'; }
+    }else{
+      inner += `<div class="ys-bars">${ORG_ORDER.map((id, i) => has[i] ? `<u style="background:${YS_ORGC[id]}"></u>` : '<u></u>').join('')}</div>`;
+      cls += ' three';
+    }
+    if(evDays.has(ds)) cls += ' ev';
+    cells += `<div class="${cls}" style="${style}">${inner}</div>`;
+  }
+  const evHtml = evAll.sort((a, b) => a.ev.date.localeCompare(b.ev.date)).map(({ ev, id }) => {
+    const range = ev.endDate && ev.endDate > ev.date ? `${md(ev.date)}〜${Number(ev.endDate.split('-')[2])}` : md(ev.date);
+    const tag = one ? '' : `<em style="background:${YS_ORGC[id]}">${escapeHtml(ORG_ABBR[id])}</em>`;
+    return `<div class="ys-e">🚩 ${escapeHtml(range)} ${escapeHtml(ev.title)}${tag}</div>`;
+  }).join('');
+  return `<div class="ys-m"><div class="ys-mh">${(m === 4 || m === 1) ? `<small>${y}</small>` : ''}<b>${m}月</b><span>${cnt}日</span></div><div class="ys-g">${cells}</div>${evHtml}</div>`;
+}
+function ysSheetHtml(){
+  const one = ys.mode === 'one';
+  let legend;
+  if(one){
+    const used = new Set(); Object.values(ys.data[ORG.id].map).forEach(pd => used.add(pd.slots[0].location));
+    legend = `<div class="ys-lg3">${ysTypical(ORG.id).map(t => `<div>${escapeHtml(t)}</div>`).join('')}</div><div class="ys-lg">${Array.from(used).filter(Boolean).map(l => `<span><i style="background:${LOC_COLORS_PNG[l] || '#57534E'}"></i>${escapeHtml(l)}</span>`).join('')}<span><i class="v"></i>大会・練習会・行事</span><span class="red">赤字＝日曜・祝日</span></div>`;
+  }else{
+    legend = `<div class="ys-lg3">${ORG_ORDER.map(id => `<div><i style="background:${YS_ORGC[id]}"></i><b>${escapeHtml(ORGS[id].tab)}</b> ${escapeHtml(ysTypical(id).join('／'))}</div>`).join('')}</div><div class="ys-lg"><span><i class="v"></i>大会・練習会・行事</span><span class="red">赤字＝日曜・祝日</span><span>マスの下の3本線：左＝BC／中＝鶴六／右＝SKH</span></div>`;
+  }
+  const today = new Date();
+  return `<div class="ys-paper"><div class="ys-hd"><h1><small>${one ? escapeHtml(ORG.tab) : 'BC鶴岡・鶴六・SKH'}</small>${one ? '年間予定表' : '3団体 年間予定表'}</h1><div class="ys-yr">${ys.fy}年度</div></div>${legend}<div class="ys-grid">${ysMonths().map(ysMonthHtml).join('')}</div><div class="ys-ft"><div>※日程は変更になる場合があります。最新の予定と出欠は、LINEの「練習出欠確認」で確認してください。</div><div>${today.getFullYear()}年${today.getMonth() + 1}月${today.getDate()}日 更新</div></div></div>`;
+}
+function ysPrint(){
+  document.body.classList.add('printing-ys');
+  const wrap = document.getElementById('ysPaperWrap'); const z = wrap.style.zoom; wrap.style.zoom = 1;
+  const done = () => { document.body.classList.remove('printing-ys'); wrap.style.zoom = z; window.removeEventListener('afterprint', done); };
+  window.addEventListener('afterprint', done);
+  window.print();
+}
+function ysOpenBrowser(){
+  openExternal(location.origin + location.pathname + '?org=' + ORG.id + '&yearsheet=' + ys.fy + (ys.mode === 'one' ? '&ysmode=one' : ''));
+}
+function renderYearSheet(){
+  const body = document.getElementById('ysBody');
+  if(!body || !ys) return;
+  const line = inLineClient();
+  const ctl = `
+    <div class="ys-seg"><button type="button" class="${ys.mode === 'all' ? 'on' : ''}" onclick="ysSetMode('all')">3団体まとめ</button><button type="button" class="${ys.mode === 'one' ? 'on' : ''}" onclick="ysSetMode('one')">${escapeHtml(ORG.tab)}のみ</button></div>
+    <div class="ys-yearnav"><button type="button" onclick="ysShiftYear(-1)">‹</button><b>${ys.fy}年度（${ys.fy}年4月〜${ys.fy + 1}年3月）</b><button type="button" onclick="ysShiftYear(1)">›</button></div>
+    ${line
+      ? '<button type="button" class="mc-add-btn wide" onclick="ysOpenBrowser()">🌐 外のブラウザで開く（印刷／PDF保存）</button><div class="mc-hint">LINEの中では印刷できません。外のブラウザで開き、「印刷／PDF」を押してください。</div>'
+      : '<button type="button" class="mc-add-btn wide" onclick="ysPrint()">🖨 印刷／PDFにする</button><div class="mc-hint">印刷画面で、送信先を「PDFに保存」にすると、PDFで保存できます。用紙はA4・縦がおすすめです。</div>'}`;
+  const sheet = ys.loading ? '<div class="mc-hint" style="text-align:center;padding:40px 0">読み込み中…</div>' : ysSheetHtml();
+  body.innerHTML = `<div class="ys-ctl">${ctl}</div><div id="ysPaperWrap">${sheet}</div>`;
+  const wrap = document.getElementById('ysPaperWrap');
+  const avail = body.clientWidth || (window.innerWidth - 24);
+  wrap.style.zoom = Math.min(1, avail / 794);
+}
 
 function addChild(prefillName){
   childCounter++;
@@ -2931,6 +3101,7 @@ async function initLiff(){
   applyOrg(ORGS[wanted] ? wanted : (ORGS[saved] ? saved : 'bc'));
   if(/^\d{4}-\d{2}$/.test(params.get('month') || '')) document.getElementById('monthInput').value = params.get('month');
   if(params.get('addcal') === '1') pendingAddCal = true;
+  if(/^\d{4}$/.test(params.get('yearsheet') || '')){ ys = { mode: params.get('ysmode') === 'one' ? 'one' : 'all', fy: Number(params.get('yearsheet')), data: null, loading: true }; setTimeout(() => openYearSheet(), 300); }
   liffReadyPromise = initLiff();   // LINEの初期化とFirestoreの読み込みを同時に走らせる
   loadPracticeDates();
 })();
