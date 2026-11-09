@@ -461,7 +461,7 @@
   .ys-d.three{justify-content:space-between;padding:1px 0 2px;} .ys-d span{line-height:15px;}
   .ys-d.red{color:#DC2626;} .ys-d.blue{color:#2563EB;} .ys-d.on{color:#fff !important;}
   .ys-d.ev{box-shadow:0 0 0 2.5px #F59E0B inset;} .ys-d.ev:not(.on){background:#FDE68A;}
-  .ys-bars{display:flex;gap:1px;width:80%;height:6px;} .ys-bars u{flex:1;display:block;border-radius:1px;background:#F3F5F7;}
+  .ys-bars{display:flex;gap:1.5px;width:86%;height:7px;} .ys-bars u{flex:1;display:block;border-radius:1px;background:#F3F5F7;}
   .ys-e{font-size:11px;font-weight:800;color:#B45309;margin-top:3px;} .ys-e em{font-style:normal;color:#fff;font-size:9px;border-radius:6px;padding:0 5px;margin-left:4px;}
   .ys-ft{position:absolute;left:30px;right:30px;bottom:12px;border-top:2px solid #E5E7EB;padding-top:5px;font-size:10.5px;color:#4B5563;display:flex;justify-content:space-between;gap:16px;}
   .ys-paper,.ys-paper *{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
@@ -471,7 +471,10 @@
     body.printing-ys #yearSheetOverlay{position:static !important;display:block !important;background:#fff !important;padding:0 !important;}
     body.printing-ys #yearSheetOverlay .cal-sheet{box-shadow:none;padding:0;max-width:none;width:auto;border:none;}
     body.printing-ys .ys-ctl,body.printing-ys .ys-top{display:none !important;}
-    body.printing-ys .ys-paper{border:none;margin:0;}
+    html:has(body.printing-ys),body.printing-ys{height:auto !important;min-height:0 !important;overflow:visible !important;margin:0 !important;padding:0 !important;}
+    body.printing-ys #yearSheetOverlay{height:auto !important;min-height:0 !important;overflow:visible !important;inset:auto !important;}
+    body.printing-ys #ysPaperWrap{overflow:visible !important;}
+    body.printing-ys .ys-paper{border:none;margin:0;height:1080px;overflow:hidden;page-break-after:avoid;break-after:avoid;}
   }
 </style>
 </head>
@@ -1958,7 +1961,7 @@ function closeAddCal(){ document.getElementById('addCalOverlay').style.display =
 
 // ---- 年間予定表（印刷用） ----
 let ys = null;
-const YS_ORGC = { bc: '#0F766E', tsururoku: '#1F5C99', skh: '#C2410C' };
+const YS_ORGC = { bc: '#1D4ED8', tsururoku: '#DB2777', skh: '#F59E0B' };
 function fyOf(date){ return (date.getMonth() + 1) >= 4 ? date.getFullYear() : date.getFullYear() - 1; }
 async function openYearSheet(fy){
   ys = ys || { mode: 'all', fy: fy || fyOf(new Date()), data: null, loading: true };
