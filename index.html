@@ -434,6 +434,11 @@
   .mc-cell.evd.has{border-color:#F59E0B;}
   .mc-ev{color:#92400E !important;}
   .mc-grid{gap:4px;}
+  .mc-add-btn{flex:1;border:2px solid var(--navy);background:#fff;color:var(--navy);border-radius:12px;padding:12px;font-size:14px;font-weight:800;cursor:pointer;}
+  .mc-add-btn.wide{width:100%;margin-top:10px;flex:none;background:var(--navy);color:#fff;}
+  .ac-row{display:flex;justify-content:space-between;align-items:center;gap:8px;border-bottom:1px solid var(--border);padding:8px 0;font-size:13px;}
+  .ac-b{display:flex;gap:6px;flex-shrink:0;}
+  .ac-b button{border:2px solid var(--navy);background:#fff;color:var(--navy);border-radius:8px;padding:6px 10px;font-size:12px;font-weight:800;cursor:pointer;}
 </style>
 </head>
 <body>
@@ -472,8 +477,20 @@
     <div id="mcEvents" style="margin-top:8px;"></div>
     <div class="mc-hint">日付をタップすると、その日の出欠入力に移ります。</div>
     <div class="mc-actions">
+      <button type="button" class="mc-add-btn" onclick="openAddCal()">📆 カレンダーに追加</button>
       <button type="button" class="mc-close-btn" onclick="closeCalOverlay()">閉じる</button>
     </div>
+  </div>
+</div>
+
+<div id="addCalOverlay" class="cal-overlay" style="display:none;z-index:70;" onclick="if(event.target===this)closeAddCal()">
+  <div class="cal-sheet">
+    <div class="mc-title" style="margin-bottom:6px;">📆 カレンダーに追加</div>
+    <div class="mc-hint" style="margin-top:0">スマホの予定アプリに、練習日や大会を入れられます。今日以降の予定が対象です。</div>
+    <button type="button" class="mc-add-btn wide" onclick="downloadICS()">この月の予定をまとめて追加（.ics）</button>
+    <div class="mc-hint">うまく開けない時は、右上の︙から外部ブラウザで開いてください。</div>
+    <div id="addCalList"></div>
+    <div class="mc-actions"><button type="button" class="mc-close-btn" onclick="closeAddCal()">戻る</button></div>
   </div>
 </div>
 
@@ -1789,6 +1806,94 @@ function initAcc(){
   });
 }
 initAcc();
+
+
+// ---- カレンダー追加（.ics / Googleカレンダー） ----
+function calItems(){
+  const today = getTodayStr();
+  const tab = ORG.tab;
+  const items = [];
+  practiceDates.forEach(pd => {
+    if(pd.date < today) return;
+    pd.slots.forEach((sl, i) => {
+      const loc = (sl.location === ORG.customLoc && sl.customLocation) ? sl.customLocation : (sl.location || '');
+      const coachTxt = (sl.coaches || []).concat(sl.customCoach ? [sl.customCoach] : []).join('・');
+      const allDay = !sl.startTime || !sl.endTime || sl.allDay;
+      items.push({ uid: `${ORG.id}-${pd.date}-p${i}`, title: `【${tab}】練習 ${loc}`.trim(), date: pd.date, endDate: pd.date, start: sl.startTime, end: sl.endTime, allDay, loc, desc: coachTxt ? `責任者：${coachTxt}` : '' });
+    });
+  });
+  monthEvents.forEach((ev, i) => {
+    const end = ev.endDate && ev.endDate >= ev.date ? ev.endDate : ev.date;
+    if(end < today) return;
+    items.push({ uid: `${ORG.id}-${ev.date}-e${i}`, title: `【${tab}】${ev.kind} ${ev.title}`, date: ev.date, endDate: end, allDay: true, loc: ev.place || '', desc: ev.memo || '' });
+  });
+  items.sort((a, b) => a.date.localeCompare(b.date) || (a.start || '').localeCompare(b.start || ''));
+  return items;
+}
+function icsEsc(t){ return String(t || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n'); }
+function ymdCompact(ds){ return ds.replace(/-/g, ''); }
+function addDays(ds, n){ const d = new Date(ds + 'T00:00:00'); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function hmCompact(t){ return t.replace(':', '') + '00'; }
+function buildICS(items){
+  const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//BC Tsuruoka//Attendance//JA', 'CALSCALE:GREGORIAN', 'X-WR-TIMEZONE:Asia/Tokyo'];
+  items.forEach(it => {
+    lines.push('BEGIN:VEVENT', `UID:${it.uid}@bc-attendance`, `DTSTAMP:${stamp}`);
+    if(it.allDay){
+      lines.push(`DTSTART;VALUE=DATE:${ymdCompact(it.date)}`, `DTEND;VALUE=DATE:${ymdCompact(addDays(it.endDate, 1))}`);
+    }else{
+      lines.push(`DTSTART:${ymdCompact(it.date)}T${hmCompact(it.start)}`, `DTEND:${ymdCompact(it.date)}T${hmCompact(it.end)}`);
+    }
+    lines.push(`SUMMARY:${icsEsc(it.title)}`);
+    if(it.loc) lines.push(`LOCATION:${icsEsc(it.loc)}`);
+    if(it.desc) lines.push(`DESCRIPTION:${icsEsc(it.desc)}`);
+    lines.push('END:VEVENT');
+  });
+  lines.push('END:VCALENDAR');
+  return lines.join('\r\n');
+}
+function googleCalUrl(it){
+  const dates = it.allDay
+    ? `${ymdCompact(it.date)}/${ymdCompact(addDays(it.endDate, 1))}`
+    : `${ymdCompact(it.date)}T${hmCompact(it.start)}/${ymdCompact(it.date)}T${hmCompact(it.end)}`;
+  const p = new URLSearchParams({ action: 'TEMPLATE', text: it.title, dates, ctz: 'Asia/Tokyo' });
+  if(it.loc) p.set('location', it.loc);
+  if(it.desc) p.set('details', it.desc);
+  return 'https://calendar.google.com/calendar/render?' + p.toString();
+}
+function openExternal(url){
+  try{
+    if(typeof liff !== 'undefined' && liff.isInClient && liff.isInClient()){ liff.openWindow({ url, external: true }); return; }
+  }catch(e){ console.error(e); }
+  window.open(url, '_blank');
+}
+function saveICSFile(ics, name){
+  if(typeof liff !== 'undefined' && liff.isInClient && liff.isInClient()){
+    try{ liff.openWindow({ url: 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics), external: true }); return; }catch(e){ console.error(e); }
+  }
+  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+function downloadICS(){
+  const items = calItems();
+  if(!items.length){ alert('追加できる予定がありません（今日以降の練習日・行事がありません）。'); return; }
+  saveICSFile(buildICS(items), `${ORG.id}-${currentMonthKey()}.ics`);
+}
+function addOneICS(i){ const it = calItems()[i]; if(it) saveICSFile(buildICS([it]), `${ORG.id}-${it.date}.ics`); }
+function addOneGoogle(i){ const it = calItems()[i]; if(it) openExternal(googleCalUrl(it)); }
+function currentMonthKey(){ const el = document.getElementById('monthInput'); return el ? el.value : 'month'; }
+function openAddCal(){
+  const items = calItems();
+  document.getElementById('addCalList').innerHTML = items.length ? items.map((it, i) => {
+    const t = it.allDay ? (it.endDate > it.date ? `${md(it.date)}〜${md(it.endDate)}` : md(it.date)) : `${md(it.date)} ${it.start}-${it.end}`;
+    return `<div class="ac-row"><div class="ac-t"><b>${escapeHtml(t)}（${weekdayOf(it.date)}）</b><br>${escapeHtml(it.title)}</div><div class="ac-b"><button type="button" onclick="addOneGoogle(${i})">Google</button><button type="button" onclick="addOneICS(${i})">標準</button></div></div>`;
+  }).join('') : '<div class="mc-hint">今日以降の練習日・行事がありません。</div>';
+  document.getElementById('addCalOverlay').style.display = 'block';
+}
+function closeAddCal(){ document.getElementById('addCalOverlay').style.display = 'none'; }
 
 function addChild(prefillName){
   childCounter++;
