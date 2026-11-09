@@ -487,8 +487,14 @@
   <div class="cal-sheet">
     <div class="mc-title" style="margin-bottom:6px;">📆 カレンダーに追加</div>
     <div class="mc-hint" style="margin-top:0">スマホの予定アプリに、練習日や大会を入れられます。今日以降の予定が対象です。</div>
-    <button type="button" class="mc-add-btn wide" onclick="downloadICS()">この月の予定をまとめて追加（.ics）</button>
-    <div class="mc-hint">うまく開けない時は、右上の︙から外部ブラウザで開いてください。</div>
+    <div id="addCalIcsBox">
+      <button type="button" class="mc-add-btn wide" onclick="downloadICS()">この月の予定をまとめて追加（.ics）</button>
+      <div class="mc-hint">iPhoneは「ファイル」に保存されたあと、開くと予定を追加できます。</div>
+    </div>
+    <div id="addCalBrowserBox" style="display:none;">
+      <div class="mc-hint">LINEの中では、Googleカレンダーのボタンが使えます。iPhoneの標準カレンダー等に入れたい時は、下のボタンでSafari/Chromeで開き直してください。</div>
+      <button type="button" class="mc-add-btn wide" onclick="openCalInBrowser()">🌐 外のブラウザで開く（まとめて追加）</button>
+    </div>
     <div id="addCalList"></div>
     <div class="mc-actions"><button type="button" class="mc-close-btn" onclick="closeAddCal()">戻る</button></div>
   </div>
@@ -1260,6 +1266,7 @@ async function loadPracticeDates(){
     await ensureHolidaysLoaded(dates.map(pd => pd.date));
   }
   renderMonthCal();
+  if(pendingAddCal){ pendingAddCal = false; openAddCal(); }
   await liffReadyPromise; // LINEの表示名が分かってから子どもの欄を作る
   if(my !== loadSeq) return;
   renderChildren();
@@ -1420,6 +1427,7 @@ function jumpToDate(ds){
 
 // ---- 年間登録 / 大会・行事 ----
 let monthEvents = [];
+let pendingAddCal = false;
 let yr = null;
 const EV_KINDS = ['大会','練習会','行事'];
 function normalizeEvents(raw){
@@ -1885,13 +1893,23 @@ function downloadICS(){
 function addOneICS(i){ const it = calItems()[i]; if(it) saveICSFile(buildICS([it]), `${ORG.id}-${it.date}.ics`); }
 function addOneGoogle(i){ const it = calItems()[i]; if(it) openExternal(googleCalUrl(it)); }
 function currentMonthKey(){ const el = document.getElementById('monthInput'); return el ? el.value : 'month'; }
+function inLineClient(){ try{ return typeof liff !== 'undefined' && liff.isInClient && liff.isInClient(); }catch(e){ return false; } }
+function openCalInBrowser(){
+  const url = location.origin + location.pathname + '?org=' + ORG.id + '&month=' + currentMonthKey() + '&addcal=1';
+  openExternal(url);
+}
 function openAddCal(){
   const items = calItems();
+  const line = inLineClient();
+  document.getElementById('addCalIcsBox').style.display = line ? 'none' : 'block';
+  document.getElementById('addCalBrowserBox').style.display = line ? 'block' : 'none';
+  document.querySelectorAll('#addCalList .ac-ics').forEach(b => b.style.display = line ? 'none' : '');
   document.getElementById('addCalList').innerHTML = items.length ? items.map((it, i) => {
     const t = it.allDay ? (it.endDate > it.date ? `${md(it.date)}〜${md(it.endDate)}` : md(it.date)) : `${md(it.date)} ${it.start}-${it.end}`;
-    return `<div class="ac-row"><div class="ac-t"><b>${escapeHtml(t)}（${weekdayOf(it.date)}）</b><br>${escapeHtml(it.title)}</div><div class="ac-b"><button type="button" onclick="addOneGoogle(${i})">Google</button><button type="button" onclick="addOneICS(${i})">標準</button></div></div>`;
+    return `<div class="ac-row"><div class="ac-t"><b>${escapeHtml(t)}（${weekdayOf(it.date)}）</b><br>${escapeHtml(it.title)}</div><div class="ac-b"><button type="button" onclick="addOneGoogle(${i})">Google</button><button type="button" class="ac-ics" onclick="addOneICS(${i})">標準</button></div></div>`;
   }).join('') : '<div class="mc-hint">今日以降の練習日・行事がありません。</div>';
   document.getElementById('addCalOverlay').style.display = 'block';
+  document.querySelectorAll('#addCalList .ac-ics').forEach(b => b.style.display = line ? 'none' : '');
 }
 function closeAddCal(){ document.getElementById('addCalOverlay').style.display = 'none'; }
 
@@ -2911,6 +2929,8 @@ async function initLiff(){
   let saved = null;
   try{ saved = localStorage.getItem('attendanceOrg'); }catch(e){}
   applyOrg(ORGS[wanted] ? wanted : (ORGS[saved] ? saved : 'bc'));
+  if(/^\d{4}-\d{2}$/.test(params.get('month') || '')) document.getElementById('monthInput').value = params.get('month');
+  if(params.get('addcal') === '1') pendingAddCal = true;
   liffReadyPromise = initLiff();   // LINEの初期化とFirestoreの読み込みを同時に走らせる
   loadPracticeDates();
 })();
