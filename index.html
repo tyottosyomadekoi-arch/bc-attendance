@@ -464,6 +464,7 @@
   .ys-bars{display:flex;gap:1px;width:80%;height:6px;} .ys-bars u{flex:1;display:block;border-radius:1px;background:#F3F5F7;}
   .ys-e{font-size:11px;font-weight:800;color:#B45309;margin-top:3px;} .ys-e em{font-style:normal;color:#fff;font-size:9px;border-radius:6px;padding:0 5px;margin-left:4px;}
   .ys-ft{position:absolute;left:30px;right:30px;bottom:12px;border-top:2px solid #E5E7EB;padding-top:5px;font-size:10.5px;color:#4B5563;display:flex;justify-content:space-between;gap:16px;}
+  .ys-paper,.ys-paper *{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
   @media print{
     @page{size:A4 portrait;margin:0;}
     body.printing-ys > *:not(#yearSheetOverlay){display:none !important;}
@@ -2059,7 +2060,9 @@ function ysSheetHtml(){
 function ysPrint(){
   document.body.classList.add('printing-ys');
   const wrap = document.getElementById('ysPaperWrap'); const z = wrap.style.zoom; wrap.style.zoom = 1;
-  const done = () => { document.body.classList.remove('printing-ys'); wrap.style.zoom = z; window.removeEventListener('afterprint', done); };
+  const oldTitle = document.title;
+  document.title = (ys.mode === 'one' ? ORG.tab + ' ' : '') + '年間予定表' + ys.fy;
+  const done = () => { document.body.classList.remove('printing-ys'); wrap.style.zoom = z; document.title = oldTitle; window.removeEventListener('afterprint', done); };
   window.addEventListener('afterprint', done);
   window.print();
 }
